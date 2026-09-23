@@ -721,6 +721,10 @@ document.addEventListener('DOMContentLoaded', () => {
       vinylTitle.textContent = track.title;
       vinylArtist.textContent = track.artist;
 
+      if (mobileMiniThumb) mobileMiniThumb.src = track.thumbnail;
+      if (mobileMiniTitle) mobileMiniTitle.textContent = track.title;
+      if (mobileMiniArtist) mobileMiniArtist.textContent = track.artist;
+
       updateHeroDetails(track);
       updateActivePlayingRow(track.videoId);
       updateDockLikeState();
@@ -1010,23 +1014,87 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Mobile Playlist Cards & Chips
-  document.querySelectorAll('.mobile-playlist-card').forEach(card => {
-    card.addEventListener('click', () => {
-      const genre = card.dataset.genre || 'global';
-      loadTrending(genre);
-      showToast(`Loading ${card.querySelector('.card-text').innerText.replace('\n', ' ')}`);
+  // Mobile V2 Cards & Releases Click-to-Play
+  document.querySelectorAll('.mobile-v2-pick-card, .mobile-v2-release-item').forEach(card => {
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('.mobile-v2-more-btn')) {
+        e.stopPropagation();
+        const t = card.dataset.title || 'Song';
+        showToast(`Options: ${t}`);
+        return;
+      }
+      const vid = card.dataset.video || '2bJKg73Q_S4';
+      const title = card.dataset.title || 'Landscape';
+      const artist = card.dataset.artist || 'Generic';
+      const img = card.querySelector('img')?.src || 'images/mobile/card_landscape.png';
+      const trackObj = {
+        videoId: vid,
+        title: title,
+        artist: artist,
+        album: 'Top Picks',
+        duration: '3:30',
+        durationSec: 210,
+        thumbnail: img
+      };
+      player.playTrack(trackObj, [trackObj]);
+      if (mobileMiniDock) mobileMiniDock.style.display = 'flex';
+      showToast(`Playing ${title}`);
     });
   });
 
-  document.querySelectorAll('.mobile-chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-      document.querySelectorAll('.mobile-chip').forEach(c => c.classList.remove('active'));
-      chip.classList.add('active');
-      const genre = chip.dataset.genre || 'sweetener';
-      loadTrending(genre);
+  // Mobile Bottom Navigation Bar Actions
+  const navHomeBtn = document.getElementById('mobileNavHomeBtn');
+  const navSearchBtn = document.getElementById('mobileNavSearchBtn');
+  const navPlaylistBtn = document.getElementById('mobileNavPlaylistBtn');
+  const navProfileBtn = document.getElementById('mobileNavProfileBtn');
+
+  function setMobileNavActive(activeBtn) {
+    document.querySelectorAll('.mobile-v2-nav-item').forEach(b => b.classList.remove('active'));
+    activeBtn?.classList.add('active');
+  }
+
+  if (navHomeBtn) {
+    navHomeBtn.addEventListener('click', () => {
+      setMobileNavActive(navHomeBtn);
+      if (mobileHomeView) mobileHomeView.style.display = 'block';
+      if (desktopTracklistView) desktopTracklistView.style.display = 'none';
+      if (settingsView) settingsView.style.display = 'none';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     });
-  });
+  }
+
+  if (navSearchBtn) {
+    navSearchBtn.addEventListener('click', () => {
+      setMobileNavActive(navSearchBtn);
+      if (desktopTracklistView) desktopTracklistView.style.display = 'block';
+      if (mobileHomeView) mobileHomeView.style.display = 'none';
+      if (searchInput) {
+        searchInput.focus();
+        showToast('Type to search music...');
+      }
+    });
+  }
+
+  if (navPlaylistBtn) {
+    navPlaylistBtn.addEventListener('click', () => {
+      setMobileNavActive(navPlaylistBtn);
+      if (desktopTracklistView) desktopTracklistView.style.display = 'block';
+      if (mobileHomeView) mobileHomeView.style.display = 'none';
+      showToast('Viewing Tracklist');
+    });
+  }
+
+  if (navProfileBtn) {
+    navProfileBtn.addEventListener('click', () => {
+      setMobileNavActive(navProfileBtn);
+      if (settingsView) {
+        settingsView.style.display = 'block';
+        if (mobileHomeView) mobileHomeView.style.display = 'none';
+        if (desktopTracklistView) desktopTracklistView.style.display = 'none';
+        updateDeviceProfileUI();
+      }
+    });
+  }
 
   // ===================================================================
   // iPod Classic Click Wheel Engine
