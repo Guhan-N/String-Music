@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=v5_mobile_auto">
+  <link rel="stylesheet" href="css/style.css?v=v7_mobile_home_design">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23a855f7'><path d='M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z'/></svg>">
   <!-- PWA & Mobile Installability -->
   <link rel="manifest" href="./manifest.json">
@@ -170,84 +170,161 @@
       </div>
 
       <!-- 2. Mobile Home View (Bottom Right Screen in reference image) -->
+      <!-- 2. Mobile Home View (Matching Reference Phone Image) -->
       <div id="mobileHomeView" class="content-subview" style="display:none;">
-        <div class="mobile-frame-container">
-          <div class="mobile-home-header">
-            <h2 class="mobile-home-title">Home</h2>
-            <button class="mobile-bell-btn" title="Notifications">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-              </svg>
-            </button>
-          </div>
-
-          <!-- Featured Card -->
-          <div class="mobile-featured-card" id="mobileHeroCard">
-            <div class="mobile-featured-thumb-wrap">
-              <img id="mobileHeroThumb" src="icons/sweetener_cover.png" alt="Featured Track" />
+        <div class="mobile-v2-container">
+          <!-- Top Header: S Logo + SimpMusic & AD-FREE Pill -->
+          <div class="mobile-v2-header">
+            <div class="mobile-v2-brand">
+              <div class="mobile-v2-s-badge">S</div>
+              <span class="mobile-v2-title">SimpMusic</span>
             </div>
-            <div class="mobile-featured-title" id="mobileHeroTitle">lovely (with Khalid)</div>
+            <div class="mobile-v2-adfree-pill">AD-FREE</div>
           </div>
 
-          <!-- Popular Playlists Section -->
-          <div class="mobile-section-header">
-            <h3>Popular Playlists</h3>
-          </div>
+          <!-- Section Subtitle: HOME -->
+          <div class="mobile-v2-page-sub">HOME</div>
 
-          <div class="mobile-playlists-grid">
-            <!-- 1. Popular Playlists (Music + Shuffle) -->
-            <div class="mobile-playlist-card" data-genre="global">
-              <div class="card-text">Popular<br/>Playlists</div>
-              <div class="card-sub-icons">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+          <!-- Section 1: FOR YOU / Top Picks -->
+          <div class="mobile-v2-section">
+            <div class="mobile-v2-subheading">FOR YOU</div>
+            <h2 class="mobile-v2-heading">Top Picks</h2>
+
+            <div class="mobile-v2-picks-scroll">
+              <!-- Row 1 -->
+              <div class="mobile-v2-picks-row">
+                <div class="mobile-v2-pick-card" data-video="2bJKg73Q_S4" data-title="Landscape" data-artist="Generic">
+                  <div class="mobile-v2-pick-thumb-wrap">
+                    <img class="mobile-v2-pick-img" src="images/mobile/card_landscape.png" alt="Landscape" />
+                  </div>
+                  <div class="mobile-v2-pick-name">Landscape</div>
+                  <div class="mobile-v2-pick-sub">Generic</div>
+                </div>
+
+                <div class="mobile-v2-pick-card" data-video="DyDfgMOUjCI" data-title="Generic" data-artist="Generic">
+                  <div class="mobile-v2-pick-thumb-wrap">
+                    <img class="mobile-v2-pick-img" src="images/mobile/card_generic_man.png" alt="Generic" />
+                  </div>
+                  <div class="mobile-v2-pick-name">Generic</div>
+                  <div class="mobile-v2-pick-sub">Generic</div>
+                </div>
+
+                <div class="mobile-v2-pick-card" data-video="LZyybvVx-js" data-title="The Pick" data-artist="Generic">
+                  <div class="mobile-v2-pick-thumb-wrap">
+                    <img class="mobile-v2-pick-img" src="images/mobile/card_the_pick.png" alt="The Pick" />
+                  </div>
+                  <div class="mobile-v2-pick-name">The Pick</div>
+                  <div class="mobile-v2-pick-sub">Generic</div>
+                </div>
+
+                <div class="mobile-v2-pick-card" data-video="Ah0Ys50CqO8" data-title="Wish You" data-artist="Billie Eilish">
+                  <div class="mobile-v2-pick-thumb-wrap">
+                    <img class="mobile-v2-pick-img" src="images/mobile/card_row1_peek.png" alt="W..." />
+                  </div>
+                  <div class="mobile-v2-pick-name">W...</div>
+                  <div class="mobile-v2-pick-sub">Billi...</div>
+                </div>
+              </div>
+
+              <!-- Row 2 -->
+              <div class="mobile-v2-picks-row">
+                <div class="mobile-v2-pick-card" data-video="4NRXx6U8ABQ" data-title="Lovely" data-artist="Generic">
+                  <div class="mobile-v2-pick-thumb-wrap">
+                    <img class="mobile-v2-pick-img" src="images/mobile/card_lovely_weeknd.png" alt="Lovely" />
+                  </div>
+                  <div class="mobile-v2-pick-name">Lovely</div>
+                  <div class="mobile-v2-pick-sub">Generic</div>
+                </div>
+
+                <div class="mobile-v2-pick-card" data-video="-PZsSWwc9xA" data-title="The Biremes..." data-artist="Generic">
+                  <div class="mobile-v2-pick-thumb-wrap">
+                    <img class="mobile-v2-pick-img" src="images/mobile/card_biremes_man.png" alt="The Biremes..." />
+                  </div>
+                  <div class="mobile-v2-pick-name">The Biremes...</div>
+                  <div class="mobile-v2-pick-sub">Generic</div>
+                </div>
+
+                <div class="mobile-v2-pick-card" data-video="yaJx0Gj_lcY" data-title="you should see me in a crown" data-artist="Billie Eilish">
+                  <div class="mobile-v2-pick-thumb-wrap">
+                    <img class="mobile-v2-pick-img" src="images/mobile/card_blonde_billie.png" alt="you should s..." />
+                  </div>
+                  <div class="mobile-v2-pick-name">you should s...</div>
+                  <div class="mobile-v2-pick-sub">Billie Eilish</div>
+                </div>
+
+                <div class="mobile-v2-pick-card" data-video="V1Pl8CzNzCw" data-title="Sweetener" data-artist="Billie Eilish">
+                  <div class="mobile-v2-pick-thumb-wrap">
+                    <img class="mobile-v2-pick-img" src="images/mobile/card_row2_peek.png" alt="Sw..." />
+                  </div>
+                  <div class="mobile-v2-pick-name">Sw...</div>
+                  <div class="mobile-v2-pick-sub">Billi...</div>
+                </div>
               </div>
             </div>
+          </div>
 
-            <!-- 2. Pipular Playlists (Compass + Heart) -->
-            <div class="mobile-playlist-card" data-genre="chill">
-              <div class="card-text">Pipular<br/>Playlists</div>
-              <div class="card-sub-icons">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          <!-- Section 2: NEW RELEASES -->
+          <div class="mobile-v2-releases-section">
+            <div class="mobile-v2-subheading">NEW RELEASES</div>
+            <div class="mobile-v2-releases-list">
+              <!-- Item 1 -->
+              <div class="mobile-v2-release-item" data-video="2bJKg73Q_S4" data-title="New Releases" data-artist="Billie Eilish">
+                <img class="mobile-v2-release-thumb" src="images/mobile/thumb_new_releases.png" alt="New Releases" />
+                <div class="mobile-v2-release-info">
+                  <div class="mobile-v2-release-title">New Releases</div>
+                  <div class="mobile-v2-release-artist">Billie Eilish</div>
+                </div>
+                <button class="mobile-v2-more-btn" title="More options">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="12" cy="5" r="2"/>
+                    <circle cx="12" cy="12" r="2"/>
+                    <circle cx="12" cy="19" r="2"/>
+                  </svg>
+                </button>
               </div>
-            </div>
 
-            <!-- 3. Finnor Playlists (Disc + Playlist) -->
-            <div class="mobile-playlist-card" data-genre="pop">
-              <div class="card-text">Finnor<br/>Playlists</div>
-              <div class="card-sub-icons">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+              <!-- Item 2 -->
+              <div class="mobile-v2-release-item" data-video="Ah0Ys50CqO8" data-title="you should see me in a crown" data-artist="Billie Eilish">
+                <img class="mobile-v2-release-thumb" src="images/mobile/thumb_crown.png" alt="you should see me in a crown" />
+                <div class="mobile-v2-release-info">
+                  <div class="mobile-v2-release-title">you should see me in a crown</div>
+                  <div class="mobile-v2-release-artist">Billie Eilish</div>
+                </div>
+                <button class="mobile-v2-more-btn" title="More options">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="12" cy="5" r="2"/>
+                    <circle cx="12" cy="12" r="2"/>
+                    <circle cx="12" cy="19" r="2"/>
+                  </svg>
+                </button>
               </div>
-            </div>
 
-            <!-- 4. Berpolisings Playlists (Playlist + Download) -->
-            <div class="mobile-playlist-card" data-genre="hiphop">
-              <div class="card-text">Berpolisings<br/>Playlists</div>
-              <div class="card-sub-icons">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <!-- Item 3 -->
+              <div class="mobile-v2-release-item" data-video="LZyybvVx-js" data-title="Xanny" data-artist="Billie Eilish">
+                <img class="mobile-v2-release-thumb" src="images/mobile/thumb_xanny.png" alt="Xanny" />
+                <div class="mobile-v2-release-info">
+                  <div class="mobile-v2-release-title">Xanny</div>
+                  <div class="mobile-v2-release-artist">Billie Eilish</div>
+                </div>
+                <button class="mobile-v2-more-btn" title="More options">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="12" cy="5" r="2"/>
+                    <circle cx="12" cy="12" r="2"/>
+                    <circle cx="12" cy="19" r="2"/>
+                  </svg>
+                </button>
               </div>
             </div>
           </div>
 
-          <!-- Mobile Tag Chips -->
-          <div class="mobile-chips-row">
-            <button class="mobile-chip active" data-genre="sweetener">Sweetener</button>
-            <button class="mobile-chip" data-genre="rock">When We All Fall Asleep</button>
-            <button class="mobile-chip" data-genre="indie">Happier Than Ever</button>
-          </div>
-
-          <!-- Mobile Floating Mini Player Pill -->
+          <!-- Mobile Floating Mini Player Pill (Hidden until playing or subtle) -->
           <div class="mobile-mini-dock" id="mobileMiniDock">
             <div class="mini-dock-thumb-wrap">
-              <img id="mobileMiniThumb" src="icons/sweetener_cover.png" alt="Mini Thumb" />
+              <img id="mobileMiniThumb" src="images/mobile/card_landscape.png" alt="Mini Thumb" />
             </div>
             <div class="mini-dock-info">
-              <div class="mini-dock-title" id="mobileMiniTitle">lovely (with Khalid)</div>
-              <div class="mini-dock-artist" id="mobileMiniArtist">Billie Eilish</div>
+              <div class="mini-dock-title" id="mobileMiniTitle">Landscape</div>
+              <div class="mini-dock-artist" id="mobileMiniArtist">Generic</div>
             </div>
             <div class="mini-dock-actions">
               <button class="mini-dock-btn" id="mobileMiniLikeBtn" title="Like">
@@ -258,6 +335,38 @@
               </button>
             </div>
           </div>
+
+          <!-- Bottom Navigation Bar Matching Reference Image -->
+          <nav class="mobile-v2-bottom-bar">
+            <button class="mobile-v2-nav-item active" id="mobileNavHomeBtn" title="Home">
+              <div class="mobile-v2-nav-glow"></div>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+              </svg>
+              <span>Home</span>
+            </button>
+            <button class="mobile-v2-nav-item" id="mobileNavSearchBtn" title="Search">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+            </button>
+            <button class="mobile-v2-nav-item" id="mobileNavPlaylistBtn" title="Library">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <line x1="8" y1="6" x2="21" y2="6"></line>
+                <line x1="8" y1="12" x2="21" y2="12"></line>
+                <line x1="8" y1="18" x2="16" y2="18"></line>
+                <polyline points="3 6 5 8 3 10"></polyline>
+              </svg>
+            </button>
+            <button class="mobile-v2-nav-item" id="mobileNavProfileBtn" title="Profile">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <circle cx="12" cy="10" r="3"></circle>
+                <path d="M6.168 18.849a4 4 0 0 1 3.832-2.849h4a4 4 0 0 1 3.832 2.849"></path>
+              </svg>
+            </button>
+          </nav>
         </div>
       </div>
 
@@ -607,10 +716,10 @@
   <div id="yt-player-container"></div>
 
   <!-- Scripts -->
-  <script src="js/clientCatalog.js?v=v5_mobile_auto"></script>
-  <script src="js/player.js?v=v5_mobile_auto"></script>
-  <script src="js/lyrics.js?v=v5_mobile_auto"></script>
-  <script src="js/app.js?v=v5_mobile_auto"></script>
+  <script src="js/clientCatalog.js?v=v7_mobile_home_design"></script>
+  <script src="js/player.js?v=v7_mobile_home_design"></script>
+  <script src="js/lyrics.js?v=v7_mobile_home_design"></script>
+  <script src="js/app.js?v=v7_mobile_home_design"></script>
 
   <!-- PWA Service Worker & Install Prompt -->
   <script>
