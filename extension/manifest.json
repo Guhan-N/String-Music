@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "SimpMusic - Ad-Free Music & Lyrics",
+  "version": "1.0.0",
+  "description": "Stream ad-free music from YouTube Music with synchronized LRCLIB lyrics in background.",
+  "permissions": [
+    "storage",
+    "offscreen"
+  ],
+  "host_permissions": [
+    "*://*.youtube.com/*",
+    "*://*.googlevideo.com/*",
+    "*://lrclib.net/*",
+    "http://localhost:3000/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "SimpMusic Mini-Player"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

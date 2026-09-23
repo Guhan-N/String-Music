@@ -1,0 +1,12 @@
+{
+  "name": "simpmusic-ecosystem",
+  "version": "1.0.0",
+  "description": "Ad-free cross-platform music streaming ecosystem (Web, Extension, Android APK)",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "node --watch backend/server.js",
+    "backend": "cd backend && npm start",
+    "mobile:build": "cd mobile/android && .\\gradlew.bat assembleDebug --parallel --build-cache --daemon",
+    "mobile:run": "cd mobile/android && .\\gradlew.bat installDebug --parallel --build-cache --daemon"
+  }
+}

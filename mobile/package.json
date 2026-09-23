@@ -1,0 +1,14 @@
+{
+  "name": "simpmusic-mobile",
+  "version": "1.0.0",
+  "description": "SimpMusic Mobile Application (Capacitor Android wrapper)",
+  "scripts": {
+    "sync": "cap sync",
+    "build:android": "cd android && gradlew assembleDebug"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/cli": "^6.1.2",
+    "@capacitor/core": "^6.1.2"
+  }
+}
