@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=v7_mobile_home_design">
+  <link rel="stylesheet" href="css/style.css?v=v9_recent_search_settings">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23a855f7'><path d='M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z'/></svg>">
   <!-- PWA & Mobile Installability -->
   <link rel="manifest" href="./manifest.json">
@@ -171,102 +171,61 @@
 
       <!-- 2. Mobile Home View (Bottom Right Screen in reference image) -->
       <!-- 2. Mobile Home View (Matching Reference Phone Image) -->
-      <div id="mobileHomeView" class="content-subview" style="display:none;">
+      <!-- 2. Mobile Views Ecosystem -->
+      <!-- A. Mobile Home View -->
+      <div id="mobileHomeView" class="content-subview mobile-subview" style="display:none;">
         <div class="mobile-v2-container">
-          <!-- Top Header: S Logo + SimpMusic & AD-FREE Pill -->
+          <!-- Top Header: S Logo + SimpMusic & AD-FREE Pill + Settings Icon -->
           <div class="mobile-v2-header">
             <div class="mobile-v2-brand">
               <div class="mobile-v2-s-badge">S</div>
               <span class="mobile-v2-title">SimpMusic</span>
             </div>
-            <div class="mobile-v2-adfree-pill">AD-FREE</div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div class="mobile-v2-adfree-pill">AD-FREE</div>
+              <button class="mobile-header-settings-btn" id="mobileHeaderSettingsBtn" title="Settings">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="3"></circle>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Mobile Home Quick Search Input Trigger -->
+          <div class="mobile-search-trigger-wrap" id="mobileSearchTrigger">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" color="#a1a1aa">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <span class="mobile-search-trigger-placeholder">Search songs, artists, lyrics...</span>
+            <span class="mobile-search-trigger-badge">⚡</span>
           </div>
 
           <!-- Section Subtitle: HOME -->
           <div class="mobile-v2-page-sub">HOME</div>
 
-          <!-- Section 1: FOR YOU / Top Picks -->
-          <div class="mobile-v2-section">
-            <div class="mobile-v2-subheading">FOR YOU</div>
-            <h2 class="mobile-v2-heading">Top Picks</h2>
-
-            <div class="mobile-v2-picks-scroll">
-              <!-- Row 1 -->
-              <div class="mobile-v2-picks-row">
-                <div class="mobile-v2-pick-card" data-video="2bJKg73Q_S4" data-title="Landscape" data-artist="Generic">
-                  <div class="mobile-v2-pick-thumb-wrap">
-                    <img class="mobile-v2-pick-img" src="images/mobile/card_landscape.png" alt="Landscape" />
-                  </div>
-                  <div class="mobile-v2-pick-name">Landscape</div>
-                  <div class="mobile-v2-pick-sub">Generic</div>
-                </div>
-
-                <div class="mobile-v2-pick-card" data-video="DyDfgMOUjCI" data-title="Generic" data-artist="Generic">
-                  <div class="mobile-v2-pick-thumb-wrap">
-                    <img class="mobile-v2-pick-img" src="images/mobile/card_generic_man.png" alt="Generic" />
-                  </div>
-                  <div class="mobile-v2-pick-name">Generic</div>
-                  <div class="mobile-v2-pick-sub">Generic</div>
-                </div>
-
-                <div class="mobile-v2-pick-card" data-video="LZyybvVx-js" data-title="The Pick" data-artist="Generic">
-                  <div class="mobile-v2-pick-thumb-wrap">
-                    <img class="mobile-v2-pick-img" src="images/mobile/card_the_pick.png" alt="The Pick" />
-                  </div>
-                  <div class="mobile-v2-pick-name">The Pick</div>
-                  <div class="mobile-v2-pick-sub">Generic</div>
-                </div>
-
-                <div class="mobile-v2-pick-card" data-video="Ah0Ys50CqO8" data-title="Wish You" data-artist="Billie Eilish">
-                  <div class="mobile-v2-pick-thumb-wrap">
-                    <img class="mobile-v2-pick-img" src="images/mobile/card_row1_peek.png" alt="W..." />
-                  </div>
-                  <div class="mobile-v2-pick-name">W...</div>
-                  <div class="mobile-v2-pick-sub">Billi...</div>
-                </div>
+          <!-- Section 1: RECENT SONGS (Replaced Top Picks) -->
+          <div class="mobile-v2-section" id="mobileRecentSection">
+            <div class="mobile-v2-section-header-row">
+              <div>
+                <div class="mobile-v2-subheading">JUMP BACK IN</div>
+                <h2 class="mobile-v2-heading">Recent Songs</h2>
               </div>
+              <button class="mobile-v2-clear-recent-btn" id="mobileClearRecentsBtn" title="Clear recent songs">Clear</button>
+            </div>
 
-              <!-- Row 2 -->
-              <div class="mobile-v2-picks-row">
-                <div class="mobile-v2-pick-card" data-video="4NRXx6U8ABQ" data-title="Lovely" data-artist="Generic">
-                  <div class="mobile-v2-pick-thumb-wrap">
-                    <img class="mobile-v2-pick-img" src="images/mobile/card_lovely_weeknd.png" alt="Lovely" />
-                  </div>
-                  <div class="mobile-v2-pick-name">Lovely</div>
-                  <div class="mobile-v2-pick-sub">Generic</div>
-                </div>
-
-                <div class="mobile-v2-pick-card" data-video="-PZsSWwc9xA" data-title="The Biremes..." data-artist="Generic">
-                  <div class="mobile-v2-pick-thumb-wrap">
-                    <img class="mobile-v2-pick-img" src="images/mobile/card_biremes_man.png" alt="The Biremes..." />
-                  </div>
-                  <div class="mobile-v2-pick-name">The Biremes...</div>
-                  <div class="mobile-v2-pick-sub">Generic</div>
-                </div>
-
-                <div class="mobile-v2-pick-card" data-video="yaJx0Gj_lcY" data-title="you should see me in a crown" data-artist="Billie Eilish">
-                  <div class="mobile-v2-pick-thumb-wrap">
-                    <img class="mobile-v2-pick-img" src="images/mobile/card_blonde_billie.png" alt="you should s..." />
-                  </div>
-                  <div class="mobile-v2-pick-name">you should s...</div>
-                  <div class="mobile-v2-pick-sub">Billie Eilish</div>
-                </div>
-
-                <div class="mobile-v2-pick-card" data-video="V1Pl8CzNzCw" data-title="Sweetener" data-artist="Billie Eilish">
-                  <div class="mobile-v2-pick-thumb-wrap">
-                    <img class="mobile-v2-pick-img" src="images/mobile/card_row2_peek.png" alt="Sw..." />
-                  </div>
-                  <div class="mobile-v2-pick-name">Sw...</div>
-                  <div class="mobile-v2-pick-sub">Billi...</div>
-                </div>
-              </div>
+            <div class="mobile-v2-picks-scroll" id="mobileRecentScroll">
+              <!-- Dynamically rendered via renderMobileRecentSongs() in app.js -->
+              <div class="mobile-v2-picks-row" id="mobileRecentRow1"></div>
+              <div class="mobile-v2-picks-row" id="mobileRecentRow2"></div>
             </div>
           </div>
 
           <!-- Section 2: NEW RELEASES -->
           <div class="mobile-v2-releases-section">
             <div class="mobile-v2-subheading">NEW RELEASES</div>
-            <div class="mobile-v2-releases-list">
+            <div class="mobile-v2-releases-list" id="mobileNewReleasesList">
               <!-- Item 1 -->
               <div class="mobile-v2-release-item" data-video="2bJKg73Q_S4" data-title="New Releases" data-artist="Billie Eilish">
                 <img class="mobile-v2-release-thumb" src="images/mobile/thumb_new_releases.png" alt="New Releases" />
@@ -316,59 +275,281 @@
               </div>
             </div>
           </div>
+        </div>
+      </div>
 
-          <!-- Mobile Floating Mini Player Pill (Hidden until playing or subtle) -->
-          <div class="mobile-mini-dock" id="mobileMiniDock">
-            <div class="mini-dock-thumb-wrap">
-              <img id="mobileMiniThumb" src="images/mobile/card_landscape.png" alt="Mini Thumb" />
-            </div>
-            <div class="mini-dock-info">
-              <div class="mini-dock-title" id="mobileMiniTitle">Landscape</div>
-              <div class="mini-dock-artist" id="mobileMiniArtist">Generic</div>
-            </div>
-            <div class="mini-dock-actions">
-              <button class="mini-dock-btn" id="mobileMiniLikeBtn" title="Like">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-              </button>
-              <button class="mini-dock-btn" id="mobileMiniPlayBtn" title="Play/Pause">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-              </button>
-            </div>
-          </div>
-
-          <!-- Bottom Navigation Bar Matching Reference Image -->
-          <nav class="mobile-v2-bottom-bar">
-            <button class="mobile-v2-nav-item active" id="mobileNavHomeBtn" title="Home">
-              <div class="mobile-v2-nav-glow"></div>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+      <!-- B. Dedicated Mobile Search Subview -->
+      <div id="mobileSearchView" class="content-subview mobile-subview" style="display:none;">
+        <div class="mobile-v2-container">
+          <!-- Mobile Search Header Bar -->
+          <div class="mobile-search-header">
+            <button class="mobile-search-back-btn" id="mobileSearchBackBtn" title="Back to Home">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="15 18 9 12 15 6"></polyline>
               </svg>
-              <span>Home</span>
             </button>
-            <button class="mobile-v2-nav-item" id="mobileNavSearchBtn" title="Search">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <div class="mobile-search-input-box">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" color="#a1a1aa">
                 <circle cx="11" cy="11" r="8"></circle>
                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
               </svg>
-            </button>
-            <button class="mobile-v2-nav-item" id="mobileNavPlaylistBtn" title="Library">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                <line x1="8" y1="6" x2="21" y2="6"></line>
-                <line x1="8" y1="12" x2="21" y2="12"></line>
-                <line x1="8" y1="18" x2="16" y2="18"></line>
-                <polyline points="3 6 5 8 3 10"></polyline>
-              </svg>
-            </button>
-            <button class="mobile-v2-nav-item" id="mobileNavProfileBtn" title="Profile">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <circle cx="12" cy="10" r="3"></circle>
-                <path d="M6.168 18.849a4 4 0 0 1 3.832-2.849h4a4 4 0 0 1 3.832 2.849"></path>
-              </svg>
-            </button>
-          </nav>
+              <input type="text" id="mobileSearchInput" class="mobile-search-input" placeholder="Search songs, artists, lyrics..." autocomplete="off">
+              <button id="mobileSearchClearBtn" class="mobile-search-clear-btn" title="Clear">✕</button>
+            </div>
+          </div>
+
+          <!-- Quick Genre Filter Chips -->
+          <div class="mobile-search-genres" id="mobileSearchGenres">
+            <button class="mobile-genre-pill active" data-genre="all">🔥 All</button>
+            <button class="mobile-genre-pill" data-genre="global">🌍 Global</button>
+            <button class="mobile-genre-pill" data-genre="chill">☕ Chill</button>
+            <button class="mobile-genre-pill" data-genre="pop">✨ Pop</button>
+            <button class="mobile-genre-pill" data-genre="hiphop">🎤 Hip-Hop</button>
+            <button class="mobile-genre-pill" data-genre="rock">🎸 Rock</button>
+            <button class="mobile-genre-pill" data-genre="indie">🌿 Indie</button>
+          </div>
+
+          <!-- Autocomplete Suggestions Dropdown -->
+          <div id="mobileSearchSuggestions" class="mobile-search-suggestions"></div>
+
+          <!-- Recent Searches History (Quick tap) -->
+          <div class="mobile-search-history-section" id="mobileSearchHistorySection">
+            <div class="mobile-search-section-header">
+              <span class="mobile-v2-subheading">RECENT SEARCHES</span>
+              <button class="mobile-clear-history-btn" id="mobileClearHistoryBtn">Clear</button>
+            </div>
+            <div class="mobile-search-chips-wrap" id="mobileSearchChipsWrap"></div>
+          </div>
+
+          <!-- Search Results List Container -->
+          <div class="mobile-search-results-section">
+            <div class="mobile-search-status-bar">
+              <span class="mobile-v2-subheading" id="mobileSearchResultsStatus">DISCOVER MUSIC</span>
+            </div>
+            <div class="mobile-search-results-list" id="mobileSearchResultsList">
+              <!-- Dynamically populated via searchSongs() or catalog -->
+            </div>
+          </div>
         </div>
       </div>
+
+      <!-- C. Dedicated Mobile Settings Subview -->
+      <div id="mobileSettingsView" class="content-subview mobile-subview" style="display:none;">
+        <div class="mobile-v2-container">
+          <!-- Mobile Settings Header -->
+          <div class="mobile-settings-header">
+            <button class="mobile-settings-back-btn" id="mobileSettingsBackBtn" title="Back">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </button>
+            <h1 class="mobile-settings-title">Settings</h1>
+            <div style="width:36px;"></div>
+          </div>
+
+          <!-- Settings Sections -->
+          <div class="mobile-settings-content">
+            <!-- 1. Device Profile Card -->
+            <div class="mobile-setting-card">
+              <div class="mobile-setting-card-title">📱 Device Profile</div>
+              <div class="mobile-profile-banner">
+                <div class="mobile-profile-avatar">🎧</div>
+                <div class="mobile-profile-info">
+                  <div class="mobile-profile-name" id="mobileProfileDeviceName">My Primary Device</div>
+                  <div class="mobile-profile-sub">Ad-Free SimpMusic Account</div>
+                </div>
+                <span class="mobile-profile-pill" id="mobileProfileIdBadge">#SIMP-01</span>
+              </div>
+              <div class="mobile-profile-stats">
+                <div class="mobile-stat-box">
+                  <span class="mobile-stat-num" id="mobileStatLikes">0</span>
+                  <span class="mobile-stat-label">Likes</span>
+                </div>
+                <div class="mobile-stat-box">
+                  <span class="mobile-stat-num" id="mobileStatRecents">0</span>
+                  <span class="mobile-stat-label">Recents</span>
+                </div>
+                <div class="mobile-stat-box">
+                  <span class="mobile-stat-num" id="mobileStatPlaylists">0</span>
+                  <span class="mobile-stat-label">Playlists</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. Audio & Streaming Quality -->
+            <div class="mobile-setting-card">
+              <div class="mobile-setting-card-title">🎧 Audio Quality</div>
+              <div class="mobile-setting-desc">Set streaming bitrate and audio fidelity</div>
+              <div class="mobile-quality-selector" id="mobileQualitySelector">
+                <button class="mobile-quality-btn" data-quality="saver">
+                  <span class="quality-label">Saver</span>
+                  <span class="quality-sub">96 kbps</span>
+                </button>
+                <button class="mobile-quality-btn active" data-quality="standard">
+                  <span class="quality-label">Standard</span>
+                  <span class="quality-sub">192 kbps</span>
+                </button>
+                <button class="mobile-quality-btn" data-quality="high">
+                  <span class="quality-label">High Res</span>
+                  <span class="quality-sub">320 kbps</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- 3. Playback Preferences -->
+            <div class="mobile-setting-card">
+              <div class="mobile-setting-card-title">🎵 Playback Preferences</div>
+              
+              <div class="mobile-toggle-row">
+                <div class="mobile-toggle-info">
+                  <div class="mobile-toggle-title">Autoplay Next Track</div>
+                  <div class="mobile-toggle-desc">Automatically play similar songs when queue ends</div>
+                </div>
+                <label class="mobile-switch">
+                  <input type="checkbox" id="mobileAutoplayToggle" checked>
+                  <span class="mobile-slider"></span>
+                </label>
+              </div>
+
+              <div class="mobile-toggle-row">
+                <div class="mobile-toggle-info">
+                  <div class="mobile-toggle-title">Auto Synchronized Lyrics</div>
+                  <div class="mobile-toggle-desc">Pre-fetch real-time LRCLIB karaoke lyrics</div>
+                </div>
+                <label class="mobile-switch">
+                  <input type="checkbox" id="mobileAutoLyricsToggle" checked>
+                  <span class="mobile-slider"></span>
+                </label>
+              </div>
+
+              <div class="mobile-toggle-row">
+                <div class="mobile-toggle-info">
+                  <div class="mobile-toggle-title">AMOLED Pitch Black Mode</div>
+                  <div class="mobile-toggle-desc">Pure black #000000 background for battery saving</div>
+                </div>
+                <label class="mobile-switch">
+                  <input type="checkbox" id="mobileAmoledToggle">
+                  <span class="mobile-slider"></span>
+                </label>
+              </div>
+
+              <div class="mobile-toggle-row">
+                <div class="mobile-toggle-info">
+                  <div class="mobile-toggle-title">Dynamic Ambient Glows</div>
+                  <div class="mobile-toggle-desc">Smooth atmospheric background illumination</div>
+                </div>
+                <label class="mobile-switch">
+                  <input type="checkbox" id="mobileGlowToggle" checked>
+                  <span class="mobile-slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <!-- 4. Data, Sync & Backup -->
+            <div class="mobile-setting-card">
+              <div class="mobile-setting-card-title">🔄 Backup & Account Sync</div>
+              <div class="mobile-setting-desc">Transfer favorites and playlists across devices</div>
+              
+              <div class="mobile-btn-col">
+                <button class="btn-primary mobile-full-btn" id="mobileExportBtn">
+                  <span>📥 Export Account Memory (.json)</span>
+                </button>
+                <button class="btn-secondary mobile-full-btn" id="mobileCopySyncBtn">
+                  <span>📋 Copy Sync Code</span>
+                </button>
+                <div style="display:flex; gap:10px;">
+                  <button class="btn-secondary mobile-full-btn" id="mobileImportTriggerBtn">
+                    <span>📂 Import Backup (.json)</span>
+                  </button>
+                  <input type="file" id="mobileImportFileInput" accept=".json" style="display:none;" />
+                </div>
+              </div>
+            </div>
+
+            <!-- 5. Cache & Reset -->
+            <div class="mobile-setting-card">
+              <div class="mobile-setting-card-title">🗑️ Storage & Data</div>
+              
+              <div class="mobile-action-row">
+                <div>
+                  <div class="mobile-toggle-title">Clear Recent Songs</div>
+                  <div class="mobile-toggle-desc">Remove recent playback history from this device</div>
+                </div>
+                <button class="btn-secondary" id="mobileClearRecentsSettingsBtn" style="padding:6px 14px; font-size:0.8rem;">Clear</button>
+              </div>
+
+              <div class="mobile-action-row" style="margin-top:12px; border-top:1px solid rgba(255,255,255,0.06); padding-top:12px;">
+                <div>
+                  <div class="mobile-toggle-title" style="color:#f87171;">Wipe All Device Data</div>
+                  <div class="mobile-toggle-desc">Reset likes, playlists, and cached metadata</div>
+                </div>
+                <button class="btn-danger" id="mobileResetAllBtn" style="padding:6px 14px; font-size:0.8rem;">Reset</button>
+              </div>
+            </div>
+
+            <!-- 6. About SimpMusic -->
+            <div class="mobile-setting-card" style="text-align:center;">
+              <div class="mobile-v2-s-badge" style="margin:0 auto 10px auto;">S</div>
+              <div style="font-weight:800; font-size:1.1rem;">SimpMusic • Mobile Pro</div>
+              <div style="font-size:0.8rem; color:#71717a; margin-top:4px;">Version 2.4.0 • Zero Ads • Free Forever</div>
+              <div style="font-size:0.75rem; color:#a1a1aa; margin-top:8px;">Powered by YouTube Music & LRCLIB Synced Lyrics</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile Floating Mini Player Pill (Persistent across mobile tabs) -->
+      <div class="mobile-mini-dock" id="mobileMiniDock">
+        <div class="mini-dock-thumb-wrap">
+          <img id="mobileMiniThumb" src="images/mobile/card_landscape.png" alt="Mini Thumb" />
+        </div>
+        <div class="mini-dock-info">
+          <div class="mini-dock-title" id="mobileMiniTitle">Landscape</div>
+          <div class="mini-dock-artist" id="mobileMiniArtist">Generic</div>
+        </div>
+        <div class="mini-dock-actions">
+          <button class="mini-dock-btn" id="mobileMiniLikeBtn" title="Like">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </button>
+          <button class="mini-dock-btn" id="mobileMiniPlayBtn" title="Play/Pause">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Persistent Mobile Bottom Navigation Bar -->
+      <nav class="mobile-v2-bottom-bar" id="mobileBottomBar">
+        <button class="mobile-v2-nav-item active" id="mobileNavHomeBtn" title="Home">
+          <div class="mobile-v2-nav-glow"></div>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+          </svg>
+          <span>Home</span>
+        </button>
+        <button class="mobile-v2-nav-item" id="mobileNavSearchBtn" title="Search">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <span>Search</span>
+        </button>
+        <button class="mobile-v2-nav-item" id="mobileNavPlaylistBtn" title="Library">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <line x1="8" y1="6" x2="21" y2="6"></line>
+            <line x1="8" y1="12" x2="21" y2="12"></line>
+            <line x1="8" y1="18" x2="16" y2="18"></line>
+            <polyline points="3 6 5 8 3 10"></polyline>
+          </svg>
+          <span>Library</span>
+        </button>
+        <button class="mobile-v2-nav-item" id="mobileNavProfileBtn" title="Settings">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          <span>Settings</span>
+        </button>
+      </nav>
 
       <!-- Settings & Account Sync View -->
       <div id="settingsView" class="settings-view" style="display:none;">
@@ -716,10 +897,10 @@
   <div id="yt-player-container"></div>
 
   <!-- Scripts -->
-  <script src="js/clientCatalog.js?v=v7_mobile_home_design"></script>
-  <script src="js/player.js?v=v7_mobile_home_design"></script>
-  <script src="js/lyrics.js?v=v7_mobile_home_design"></script>
-  <script src="js/app.js?v=v7_mobile_home_design"></script>
+  <script src="js/clientCatalog.js?v=v9_recent_search_settings"></script>
+  <script src="js/player.js?v=v9_recent_search_settings"></script>
+  <script src="js/lyrics.js?v=v9_recent_search_settings"></script>
+  <script src="js/app.js?v=v9_recent_search_settings"></script>
 
   <!-- PWA Service Worker & Install Prompt -->
   <script>

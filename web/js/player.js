@@ -3,6 +3,16 @@
  * Integrates YouTube IFrame API with Audio Queue, Background Support & MediaSession API
  */
 
+// Background Audio Persistence: Override Page Visibility API so YouTube never auto-pauses on screen lock
+(function ensureBackgroundAudio() {
+  try {
+    Object.defineProperty(document, 'hidden', { get: () => false, configurable: true });
+    Object.defineProperty(document, 'visibilityState', { get: () => 'visible', configurable: true });
+    Object.defineProperty(document, 'webkitVisibilityState', { get: () => 'visible', configurable: true });
+    window.addEventListener('visibilitychange', (e) => e.stopImmediatePropagation(), true);
+  } catch (e) {}
+})();
+
 class MusicPlayer {
   constructor() {
     this.ytPlayer = null;
@@ -10,12 +20,14 @@ class MusicPlayer {
     this.queue = [];
     this.currentIndex = -1;
     this.isPlaying = false;
+    this.userPaused = false;
     this.shuffle = false;
     this.repeatMode = 'off'; // 'off' | 'all' | 'one'
     this.volume = 80;
     this.currentTime = 0;
     this.duration = 0;
     this.listeners = {};
+    this.tickerInterval = null;
     this.rafId = null;
 
     this.initYouTubeApi();
@@ -89,11 +101,21 @@ class MusicPlayer {
     switch (event.data) {
       case YT.PlayerState.PLAYING:
         this.isPlaying = true;
+        this.userPaused = false;
         this.startProgressTicker();
         this.emit('play', this.currentTrack);
         this.updateMediaSessionState('playing');
         break;
       case YT.PlayerState.PAUSED:
+        // Involuntary background pause detection: If user didn't hit pause, resume immediately!
+        if (this.isPlaying && !this.userPaused) {
+          setTimeout(() => {
+            if (!this.userPaused && this.ytPlayer && this.ytPlayer.playVideo) {
+              this.ytPlayer.playVideo();
+            }
+          }, 150);
+          return;
+        }
         this.isPlaying = false;
         this.stopProgressTicker();
         this.emit('pause');
@@ -113,7 +135,7 @@ class MusicPlayer {
 
   startProgressTicker() {
     this.stopProgressTicker();
-    const tick = () => {
+    const updateTime = () => {
       if (this.ytPlayer && this.ytPlayer.getCurrentTime) {
         try {
           const cur = this.ytPlayer.getCurrentTime() || 0;
@@ -123,14 +145,16 @@ class MusicPlayer {
           this.emit('timeupdate', { currentTime: cur, duration: dur });
         } catch (e) {}
       }
-      if (this.isPlaying) {
-        this.rafId = requestAnimationFrame(tick);
-      }
     };
-    this.rafId = requestAnimationFrame(tick);
+    this.tickerInterval = setInterval(updateTime, 500);
+    updateTime();
   }
 
   stopProgressTicker() {
+    if (this.tickerInterval) {
+      clearInterval(this.tickerInterval);
+      this.tickerInterval = null;
+    }
     if (this.rafId) {
       cancelAnimationFrame(this.rafId);
       this.rafId = null;
@@ -183,12 +207,14 @@ class MusicPlayer {
   }
 
   play() {
+    this.userPaused = false;
     if (this.ytPlayer && this.ytPlayer.playVideo) {
       this.ytPlayer.playVideo();
     }
   }
 
   pause() {
+    this.userPaused = true;
     if (this.ytPlayer && this.ytPlayer.pauseVideo) {
       this.ytPlayer.pauseVideo();
     }

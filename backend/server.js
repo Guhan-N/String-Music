@@ -6,10 +6,14 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const compression = require('compression');
 const { searchSongs, getSuggestions, getTrending, getLyrics } = require('./scraper');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Enable gzip/deflate compression for fast asset transfer
+app.use(compression());
 
 // Enable CORS for web, extensions, and mobile
 app.use(cors({
@@ -118,4 +122,11 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`   - Trending:    http://localhost:${PORT}/api/trending?genre=:genre`);
   console.log(`   - Lyrics:      http://localhost:${PORT}/api/lyrics?title=:title&artist=:artist`);
   console.log(`====================================================`);
+
+  // Asynchronously pre-warm caches so the web app loads instantaneously
+  setTimeout(() => {
+    ['global', 'chill', 'pop'].forEach(g => {
+      getTrending(g).catch(() => {});
+    });
+  }, 200);
 });
