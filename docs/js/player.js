@@ -28,10 +28,55 @@ class MusicPlayer {
     this.duration = 0;
     this.listeners = {};
     this.tickerInterval = null;
-    this.rafId = null;
+    this.heartbeatInterval = null;
+    this.silentAudio = null;
 
+    this.initSilentAudio();
     this.initYouTubeApi();
     this.setupMediaSession();
+    this.startBackgroundHeartbeat();
+  }
+
+  initSilentAudio() {
+    try {
+      // 1-second silent WAV base64
+      const silentWav = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+      this.silentAudio = new Audio(silentWav);
+      this.silentAudio.loop = true;
+      this.silentAudio.volume = 0.01;
+    } catch (e) {}
+  }
+
+  keepAudioEngineAlive() {
+    try {
+      if (this.silentAudio && this.silentAudio.paused) {
+        this.silentAudio.play().catch(() => {});
+      }
+    } catch (e) {}
+  }
+
+  pauseAudioEngine() {
+    try {
+      if (this.silentAudio && !this.silentAudio.paused) {
+        this.silentAudio.pause();
+      }
+    } catch (e) {}
+  }
+
+  startBackgroundHeartbeat() {
+    if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
+    this.heartbeatInterval = setInterval(() => {
+      if (this.isPlaying && !this.userPaused && this.ytPlayer && this.ytPlayer.getPlayerState) {
+        try {
+          const state = this.ytPlayer.getPlayerState();
+          // State 2 is PAUSED, State -1 is UNSTARTED, State 5 is CUED
+          if (state === 2 || state === -1 || state === 5) {
+            this.ytPlayer.playVideo();
+          }
+          this.keepAudioEngineAlive();
+        } catch (e) {}
+      }
+    }, 1000);
   }
 
   on(event, callback) {
@@ -46,7 +91,6 @@ class MusicPlayer {
   }
 
   initYouTubeApi() {
-    // Inject YouTube IFrame API script if not already present
     if (!window.YT) {
       const tag = document.createElement('script');
       tag.src = 'https://www.youtube.com/iframe_api';
@@ -89,7 +133,6 @@ class MusicPlayer {
         onError: (err) => {
           console.warn('YouTube Player Error:', err.data);
           this.emit('error', err.data);
-          // Auto advance if video fails to load
           setTimeout(() => this.next(), 1000);
         }
       }
@@ -102,6 +145,7 @@ class MusicPlayer {
       case YT.PlayerState.PLAYING:
         this.isPlaying = true;
         this.userPaused = false;
+        this.keepAudioEngineAlive();
         this.startProgressTicker();
         this.emit('play', this.currentTrack);
         this.updateMediaSessionState('playing');
@@ -117,12 +161,14 @@ class MusicPlayer {
           return;
         }
         this.isPlaying = false;
+        this.pauseAudioEngine();
         this.stopProgressTicker();
         this.emit('pause');
         this.updateMediaSessionState('paused');
         break;
       case YT.PlayerState.ENDED:
         this.isPlaying = false;
+        this.pauseAudioEngine();
         this.stopProgressTicker();
         this.emit('ended');
         this.onTrackEnded();
@@ -154,10 +200,6 @@ class MusicPlayer {
     if (this.tickerInterval) {
       clearInterval(this.tickerInterval);
       this.tickerInterval = null;
-    }
-    if (this.rafId) {
-      cancelAnimationFrame(this.rafId);
-      this.rafId = null;
     }
   }
 
@@ -191,11 +233,11 @@ class MusicPlayer {
 
   loadVideo(videoId) {
     if (!this.ytPlayer || !this.isReady) {
-      // Retry when player is ready
       setTimeout(() => this.loadVideo(videoId), 300);
       return;
     }
     try {
+      this.keepAudioEngineAlive();
       this.ytPlayer.loadVideoById({
         videoId: videoId,
         suggestedQuality: 'small'
@@ -208,6 +250,7 @@ class MusicPlayer {
 
   play() {
     this.userPaused = false;
+    this.keepAudioEngineAlive();
     if (this.ytPlayer && this.ytPlayer.playVideo) {
       this.ytPlayer.playVideo();
     }
@@ -215,6 +258,7 @@ class MusicPlayer {
 
   pause() {
     this.userPaused = true;
+    this.pauseAudioEngine();
     if (this.ytPlayer && this.ytPlayer.pauseVideo) {
       this.ytPlayer.pauseVideo();
     }
@@ -249,7 +293,6 @@ class MusicPlayer {
       } else if (this.repeatMode === 'all') {
         this.currentIndex = 0;
       } else {
-        // Queue ended; fetch recommendations or stop
         this.emit('queueEnded');
         return;
       }
