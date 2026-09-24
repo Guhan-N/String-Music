@@ -1600,8 +1600,8 @@ body {
 
 @media (max-width: 900px) {
   html, body {
-    background: #18181a !important;
-    background-color: #18181a !important;
+    background: #0c0d11 !important;
+    background-color: #0c0d11 !important;
     overflow-x: hidden !important;
   }
   .top-bar {
@@ -1622,15 +1622,15 @@ body {
     grid-template-rows: 1fr !important;
     height: auto !important;
     min-height: 100vh !important;
-    background: #18181a !important;
-    padding-bottom: 80px !important;
+    background: #0c0d11 !important;
+    padding-bottom: 0 !important;
   }
   .main-content {
     grid-column: 1 / -1 !important;
     grid-row: 1 / -1 !important;
     padding: 0 !important;
     display: block !important;
-    background: #18181a !important;
+    background: #0c0d11 !important;
     min-height: 100vh !important;
   }
   #desktopTracklistView {
