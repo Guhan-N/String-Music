@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SimpMusic • Ad-Free YouTube Music Streaming</title>
+  <meta name="description" content="Stream ad-free music from YouTube Music with real-time synchronized karaoke lyrics powered by LRCLIB. Zero subscriptions or API keys.">
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css?v=v7_mobile_home_design">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23a855f7'><path d='M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z'/></svg>">
+  <!-- PWA & Mobile Installability -->
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#0a0a12">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SimpMusic">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+</head>
+<body>
+  <!-- Dynamic Ambient Glows -->
+  <div class="ambient-glow-1"></div>
+  <div class="ambient-glow-2"></div>
+
+  <!-- App Structure -->
+  <div class="app-container">
+    <!-- Top Bar -->
+    <header class="top-bar">
+      <div class="brand-section">
+        <div class="logo-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+          </svg>
+        </div>
+        <span class="brand-title">SimpMusic</span>
+        <span class="brand-badge">Ad-Free</span>
+      </div>
+
+      <!-- Search Bar -->
+      <div class="search-container">
+        <div class="search-input-wrapper">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" color="#94a3b8">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="searchInput" class="search-input" placeholder="Search songs, artists, albums, or lyrics..." autocomplete="off">
+          <button id="searchClearBtn" class="search-clear-btn" title="Clear">✕</button>
+        </div>
+        <!-- Live Autocomplete Suggestions -->
+        <div id="searchSuggestions" class="search-suggestions"></div>
+      </div>
+
+
+      <!-- Top Right Actions -->
+      <div class="top-actions">
+        <button class="icon-btn" id="pwaInstallBtn" title="Install SimpMusic App on Device" style="display:none; background:var(--primary-gradient); color:white; width:auto; padding:0 14px; gap:6px; font-weight:700; font-size:0.8rem;">
+          <span>📲 Install App</span>
+        </button>
+        <button class="icon-btn" id="kbdShortcutsBtn" title="Keyboard Shortcuts (Space, ←, →, L, Q)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+            <line x1="6" y1="8" x2="8" y2="8"></line>
+            <line x1="10" y1="8" x2="12" y2="8"></line>
+            <line x1="14" y1="8" x2="18" y2="8"></line>
+            <line x1="6" y1="12" x2="10" y2="12"></line>
+            <line x1="14" y1="12" x2="18" y2="12"></line>
+            <line x1="8" y1="16" x2="16" y2="16"></line>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div>
+        <div class="nav-group-title">Discover</div>
+        <ul class="nav-list">
+          <li class="nav-item active" data-view="home">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+              <polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
+            <span>Home</span>
+          </li>
+          <li class="nav-item" data-view="explore">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
+            </svg>
+            <span>Explore Charts</span>
+          </li>
+        </ul>
+      </div>
+
+      <div>
+        <div class="nav-group-title">Library</div>
+        <ul class="nav-list">
+          <li class="nav-item" data-view="liked">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+            </svg>
+            <span>Liked Songs</span>
+          </li>
+          <li class="nav-item" data-view="queue">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="8" y1="6" x2="21" y2="6"></line>
+              <line x1="8" y1="12" x2="21" y2="12"></line>
+              <line x1="8" y1="18" x2="21" y2="18"></line>
+              <line x1="3" y1="6" x2="3.01" y2="6"></line>
+              <line x1="3" y1="12" x2="3.01" y2="12"></line>
+              <line x1="3" y1="18" x2="3.01" y2="18"></line>
+            </svg>
+            <span>Up Next Queue</span>
+          </li>
+        </ul>
+      </div>
+
+      <div>
+        <div class="nav-group-title">Account & Device</div>
+        <ul class="nav-list">
+          <li class="nav-item" data-view="settings">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+            <span>Settings & Sync</span>
+          </li>
+        </ul>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- 1. Desktop Tracklist View (Top Monitor in reference image) -->
+      <div id="desktopTracklistView" class="content-subview active">
+        <!-- Hero Album Banner (Squircle Art + Sweetener + lovely (with Khalid) + Billie Eilish + Like + Download) -->
+        <section class="album-hero-banner" id="albumHeroBanner">
+          <div class="album-hero-art-wrapper">
+            <img id="heroCoverImg" class="album-hero-art" src="icons/sweetener_cover.png" alt="Sweetener Album Cover" />
+          </div>
+          <div class="album-hero-details">
+            <div class="album-category-label" id="heroCategory">Sweetener</div>
+            <h1 class="album-hero-title" id="heroTitle">lovely (with Khalid)</h1>
+            <div class="album-hero-artist" id="heroArtist">Billie Eilish</div>
+            <div class="album-hero-actions">
+              <button class="action-pill-btn" id="heroLikeBtn">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                </svg>
+                <span>Like</span>
+              </button>
+              <button class="action-circle-btn" id="heroDownloadBtn" title="Download">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Numbered Tracklist -->
+        <div class="tracklist-container" id="numberedTracklist">
+          <!-- Rendered dynamically via JS matching 1, 2, 3, 4, active highlight row, etc. -->
+        </div>
+      </div>
+
+      <!-- 2. Mobile Home View (Bottom Right Screen in reference image) -->
+      <!-- 2. Mobile Home View (Matching Reference Phone Image) -->
+      <div id="mobileHomeView" class="content-subview" style="display:none;">
+        <div class="mobile-v2-container">
+          <!-- Top Header: S Logo + SimpMusic & AD-FREE Pill -->
+          <div class="mobile-v2-header">
+            <div class="mobile-v2-brand">
+              <div class="mobile-v2-s-badge">S</div>
+              <span class="mobile-v2-title">SimpMusic</span>
+            </div>
+            <div class="mobile-v2-adfree-pill">AD-FREE</div>
+          </div>
+
+          <!-- Section Subtitle: HOME -->
+          <div class="mobile-v2-page-sub">HOME</div>
+
+          <!-- Section 1: FOR YOU / Top Picks -->
+          <div class="mobile-v2-section">
+            <div class="mobile-v2-subheading">FOR YOU</div>
+            <h2 class="mobile-v2-heading">Top Picks</h2>
+
+            <div class="mobile-v2-picks-scroll">
+              <!-- Row 1 -->
+              <div class="mobile-v2-picks-row">
+                <div class="mobile-v2-pick-card" data-video="2bJKg73Q_S4" data-title="Landscape" data-artist="Generic">
+                  <div class="mobile-v2-pick-thumb-wrap">
+                    <img class="mobile-v2-pick-img" src="images/mobile/card_landscape.png" alt="Landscape" />
+                  </div>
+                  <div class="mobile-v2-pick-name">Landscape</div>
+                  <div class="mobile-v2-pick-sub">Generic</div>
+                </div>
+
+                <div class="mobile-v2-pick-card" data-video="DyDfgMOUjCI" data-title="Generic" data-artist="Generic">
+                  <div class="mobile-v2-pick-thumb-wrap">
+                    <img class="mobile-v2-pick-img" src="images/mobile/card_generic_man.png" alt="Generic" />
+                  </div>
+                  <div class="mobile-v2-pick-name">Generic</div>
+                  <div class="mobile-v2-pick-sub">Generic</div>
+                </div>
+
+                <div class="mobile-v2-pick-card" data-video="LZyybvVx-js" data-title="The Pick" data-artist="Generic">
+                  <div class="mobile-v2-pick-thumb-wrap">
+                    <img class="mobile-v2-pick-img" src="images/mobile/card_the_pick.png" alt="The Pick" />
+                  </div>
+                  <div class="mobile-v2-pick-name">The Pick</div>
+                  <div class="mobile-v2-pick-sub">Generic</div>
+                </div>
+
+                <div class="mobile-v2-pick-card" data-video="Ah0Ys50CqO8" data-title="Wish You" data-artist="Billie Eilish">
+                  <div class="mobile-v2-pick-thumb-wrap">
+                    <img class="mobile-v2-pick-img" src="images/mobile/card_row1_peek.png" alt="W..." />
+                  </div>
+                  <div class="mobile-v2-pick-name">W...</div>
+                  <div class="mobile-v2-pick-sub">Billi...</div>
+                </div>
+              </div>
+
+              <!-- Row 2 -->
+              <div class="mobile-v2-picks-row">
+                <div class="mobile-v2-pick-card" data-video="4NRXx6U8ABQ" data-title="Lovely" data-artist="Generic">
+                  <div class="mobile-v2-pick-thumb-wrap">
+                    <img class="mobile-v2-pick-img" src="images/mobile/card_lovely_weeknd.png" alt="Lovely" />
+                  </div>
+                  <div class="mobile-v2-pick-name">Lovely</div>
+                  <div class="mobile-v2-pick-sub">Generic</div>
+                </div>
+
+                <div class="mobile-v2-pick-card" data-video="-PZsSWwc9xA" data-title="The Biremes..." data-artist="Generic">
+                  <div class="mobile-v2-pick-thumb-wrap">
+                    <img class="mobile-v2-pick-img" src="images/mobile/card_biremes_man.png" alt="The Biremes..." />
+                  </div>
+                  <div class="mobile-v2-pick-name">The Biremes...</div>
+                  <div class="mobile-v2-pick-sub">Generic</div>
+                </div>
+
+                <div class="mobile-v2-pick-card" data-video="yaJx0Gj_lcY" data-title="you should see me in a crown" data-artist="Billie Eilish">
+                  <div class="mobile-v2-pick-thumb-wrap">
+                    <img class="mobile-v2-pick-img" src="images/mobile/card_blonde_billie.png" alt="you should s..." />
+                  </div>
+                  <div class="mobile-v2-pick-name">you should s...</div>
+                  <div class="mobile-v2-pick-sub">Billie Eilish</div>
+                </div>
+
+                <div class="mobile-v2-pick-card" data-video="V1Pl8CzNzCw" data-title="Sweetener" data-artist="Billie Eilish">
+                  <div class="mobile-v2-pick-thumb-wrap">
+                    <img class="mobile-v2-pick-img" src="images/mobile/card_row2_peek.png" alt="Sw..." />
+                  </div>
+                  <div class="mobile-v2-pick-name">Sw...</div>
+                  <div class="mobile-v2-pick-sub">Billi...</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 2: NEW RELEASES -->
+          <div class="mobile-v2-releases-section">
+            <div class="mobile-v2-subheading">NEW RELEASES</div>
+            <div class="mobile-v2-releases-list">
+              <!-- Item 1 -->
+              <div class="mobile-v2-release-item" data-video="2bJKg73Q_S4" data-title="New Releases" data-artist="Billie Eilish">
+                <img class="mobile-v2-release-thumb" src="images/mobile/thumb_new_releases.png" alt="New Releases" />
+                <div class="mobile-v2-release-info">
+                  <div class="mobile-v2-release-title">New Releases</div>
+                  <div class="mobile-v2-release-artist">Billie Eilish</div>
+                </div>
+                <button class="mobile-v2-more-btn" title="More options">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="12" cy="5" r="2"/>
+                    <circle cx="12" cy="12" r="2"/>
+                    <circle cx="12" cy="19" r="2"/>
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Item 2 -->
+              <div class="mobile-v2-release-item" data-video="Ah0Ys50CqO8" data-title="you should see me in a crown" data-artist="Billie Eilish">
+                <img class="mobile-v2-release-thumb" src="images/mobile/thumb_crown.png" alt="you should see me in a crown" />
+                <div class="mobile-v2-release-info">
+                  <div class="mobile-v2-release-title">you should see me in a crown</div>
+                  <div class="mobile-v2-release-artist">Billie Eilish</div>
+                </div>
+                <button class="mobile-v2-more-btn" title="More options">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="12" cy="5" r="2"/>
+                    <circle cx="12" cy="12" r="2"/>
+                    <circle cx="12" cy="19" r="2"/>
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Item 3 -->
+              <div class="mobile-v2-release-item" data-video="LZyybvVx-js" data-title="Xanny" data-artist="Billie Eilish">
+                <img class="mobile-v2-release-thumb" src="images/mobile/thumb_xanny.png" alt="Xanny" />
+                <div class="mobile-v2-release-info">
+                  <div class="mobile-v2-release-title">Xanny</div>
+                  <div class="mobile-v2-release-artist">Billie Eilish</div>
+                </div>
+                <button class="mobile-v2-more-btn" title="More options">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="12" cy="5" r="2"/>
+                    <circle cx="12" cy="12" r="2"/>
+                    <circle cx="12" cy="19" r="2"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mobile Floating Mini Player Pill (Hidden until playing or subtle) -->
+          <div class="mobile-mini-dock" id="mobileMiniDock">
+            <div class="mini-dock-thumb-wrap">
+              <img id="mobileMiniThumb" src="images/mobile/card_landscape.png" alt="Mini Thumb" />
+            </div>
+            <div class="mini-dock-info">
+              <div class="mini-dock-title" id="mobileMiniTitle">Landscape</div>
+              <div class="mini-dock-artist" id="mobileMiniArtist">Generic</div>
+            </div>
+            <div class="mini-dock-actions">
+              <button class="mini-dock-btn" id="mobileMiniLikeBtn" title="Like">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              </button>
+              <button class="mini-dock-btn" id="mobileMiniPlayBtn" title="Play/Pause">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Bottom Navigation Bar Matching Reference Image -->
+          <nav class="mobile-v2-bottom-bar">
+            <button class="mobile-v2-nav-item active" id="mobileNavHomeBtn" title="Home">
+              <div class="mobile-v2-nav-glow"></div>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+              </svg>
+              <span>Home</span>
+            </button>
+            <button class="mobile-v2-nav-item" id="mobileNavSearchBtn" title="Search">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+            </button>
+            <button class="mobile-v2-nav-item" id="mobileNavPlaylistBtn" title="Library">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <line x1="8" y1="6" x2="21" y2="6"></line>
+                <line x1="8" y1="12" x2="21" y2="12"></line>
+                <line x1="8" y1="18" x2="16" y2="18"></line>
+                <polyline points="3 6 5 8 3 10"></polyline>
+              </svg>
+            </button>
+            <button class="mobile-v2-nav-item" id="mobileNavProfileBtn" title="Profile">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <circle cx="12" cy="10" r="3"></circle>
+                <path d="M6.168 18.849a4 4 0 0 1 3.832-2.849h4a4 4 0 0 1 3.832 2.849"></path>
+              </svg>
+            </button>
+          </nav>
+        </div>
+      </div>
+
+      <!-- Settings & Account Sync View -->
+      <div id="settingsView" class="settings-view" style="display:none;">
+        <!-- Header -->
+        <div class="section-header">
+          <h2 class="section-title">⚙️ Settings & Device Account Sync</h2>
+        </div>
+
+        <!-- Device Account Profile -->
+        <div class="settings-card">
+          <div class="settings-card-header">
+            <div class="settings-card-title">
+              <span>📱 Device Profile</span>
+            </div>
+            <span class="brand-badge" id="deviceIdBadge">DEVICE #SIMP-01</span>
+          </div>
+          <div class="device-profile-row">
+            <div style="display:flex; align-items:center; gap:16px;">
+              <div class="device-avatar">🎧</div>
+              <div>
+                <div style="font-weight:800; font-size:1.1rem;" id="deviceProfileName">My Primary Device</div>
+                <div style="font-size:0.8rem; color:var(--text-muted);" id="devicePlatformText">SimpMusic Local Account</div>
+              </div>
+            </div>
+            <div class="device-stats-chips">
+              <div class="stat-chip">❤️ <span id="statsLikesCount">0</span> Likes</div>
+              <div class="stat-chip">📋 <span id="statsPlaylistsCount">0</span> Playlists</div>
+              <div class="stat-chip">⏱️ <span id="statsQueueCount">0</span> In Queue</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Export Account Memory -->
+        <div class="settings-card">
+          <div class="settings-card-header">
+            <div class="settings-card-title">
+              <span>📤 Export Account Memory</span>
+            </div>
+          </div>
+          <p class="settings-card-desc">
+            Export all liked songs, playlists, and settings from this device to easily transfer them to your phone, tablet, or another browser.
+          </p>
+          <div class="sync-action-grid">
+            <div class="action-card">
+              <div style="font-weight:700; font-size:0.95rem;">📥 Download Backup File</div>
+              <div style="font-size:0.8rem; color:var(--text-muted);">Save a full .json file you can send or upload anywhere.</div>
+              <button class="btn-primary" id="exportFileBtn">
+                <span>Download Backup (.json)</span>
+              </button>
+            </div>
+            <div class="action-card">
+              <div style="font-weight:700; font-size:0.95rem;">📋 Copy Shareable Sync Code</div>
+              <div style="font-size:0.8rem; color:var(--text-muted);">Copy a single encrypted text code to paste on another device.</div>
+              <button class="btn-secondary" id="copySyncCodeBtn">
+                <span>Copy Sync Code</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Import Account Memory -->
+        <div class="settings-card">
+          <div class="settings-card-header">
+            <div class="settings-card-title">
+              <span>📥 Import Account Memory (From Another Device)</span>
+            </div>
+          </div>
+          <p class="settings-card-desc">
+            Import an account backup file or paste a Sync Code to restore your songs and playlists on this device.
+          </p>
+
+          <div style="display:flex; flex-direction:column; gap:16px;">
+            <!-- File Picker -->
+            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+              <input type="file" id="importFileInput" accept=".json" style="display:none;" />
+              <button class="btn-secondary" id="chooseFileBtn">
+                <span>📂 Choose Backup File (.json)</span>
+              </button>
+              <span id="selectedFileName" style="font-size:0.85rem; color:var(--text-muted);">No file chosen</span>
+            </div>
+
+            <!-- Paste Sync Code -->
+            <div>
+              <div style="font-size:0.8rem; font-weight:700; color:var(--text-subtle); margin-bottom:6px;">OR PASTE SYNC CODE DIRECTLY:</div>
+              <textarea id="syncCodeTextarea" class="sync-textarea" placeholder="Paste the exported sync code from your other device here..."></textarea>
+            </div>
+
+            <!-- Merge vs Overwrite -->
+            <div>
+              <div style="font-size:0.8rem; font-weight:700; color:var(--text-subtle); margin-bottom:6px;">IMPORT STRATEGY:</div>
+              <div class="mode-radio-group">
+                <label class="mode-radio-label">
+                  <input type="radio" name="importMode" value="merge" checked />
+                  <span><strong>Merge Data</strong> (Keep current likes & add imported songs)</span>
+                </label>
+                <label class="mode-radio-label">
+                  <input type="radio" name="importMode" value="replace" />
+                  <span><strong>Replace All</strong> (Overwrite this device's memory completely)</span>
+                </label>
+              </div>
+            </div>
+
+            <button class="btn-primary" id="applyImportBtn" style="align-self:flex-start;">
+              <span>⚡ Import & Synchronize Account</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Danger Zone: Reset Account -->
+        <div class="settings-card" style="border-color: rgba(239, 68, 68, 0.2);">
+          <div class="settings-card-header">
+            <div class="settings-card-title" style="color:#f87171;">
+              <span>⚠️ Danger Zone</span>
+            </div>
+          </div>
+          <p class="settings-card-desc">
+            Clear all saved data on this device (liked songs, playlists, cached history) to start fresh with a clean account.
+          </p>
+          <div>
+            <button class="btn-danger" id="resetAccountBtn">
+              <span>Wipe This Device's Account Data</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Floating Bottom Player Dock -->
+  <footer class="player-dock">
+    <!-- Left: Track info -->
+    <div class="dock-track-info">
+      <div class="dock-thumb-wrapper">
+        <img id="dockThumb" class="dock-thumb" src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=200&auto=format&fit=crop&q=80" alt="Current Track">
+      </div>
+      <div class="dock-text">
+        <div class="dock-title" id="dockTitle">Select a track to play</div>
+        <div class="dock-artist" id="dockArtist">SimpMusic Ecosystem</div>
+      </div>
+      <button class="dock-like-btn" id="dockLikeBtn" title="Like Song">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Center: Playback Controls & Scrubber -->
+    <div class="dock-controls-center">
+      <div class="playback-buttons">
+        <button class="ctrl-btn" id="shuffleBtn" title="Shuffle">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="16 3 21 3 21 8"></polyline>
+            <line x1="4" y1="20" x2="21" y2="3"></line>
+            <polyline points="21 16 21 21 16 21"></polyline>
+            <line x1="15" y1="15" x2="21" y2="21"></line>
+            <line x1="4" y1="4" x2="9" y2="9"></line>
+          </svg>
+        </button>
+
+        <button class="ctrl-btn" id="prevBtn" title="Previous (or seek to 0:00)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
+          </svg>
+        </button>
+
+        <button class="play-pause-dock-btn" id="playPauseBtn" title="Play / Pause (Space)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M8 5v14l11-7z"/>
+          </svg>
+        </button>
+
+        <button class="ctrl-btn" id="nextBtn" title="Next Song">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
+          </svg>
+        </button>
+
+        <button class="ctrl-btn" id="repeatBtn" title="Repeat (Off / All / One)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="17 1 21 5 17 9"></polyline>
+            <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+            <polyline points="7 23 3 19 7 15"></polyline>
+            <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Scrubber -->
+      <div class="progress-container">
+        <span class="time-label" id="currentTimeLabel">0:00</span>
+        <div class="progress-bar-rail" id="progressRail">
+          <div class="progress-fill" id="progressFill"></div>
+          <div class="progress-thumb" id="progressThumb"></div>
+        </div>
+        <span class="time-label" id="totalDurationLabel">0:00</span>
+      </div>
+    </div>
+
+    <!-- Right: Volume & Overlays -->
+    <div class="dock-actions-right">
+      <div class="volume-wrapper">
+        <button class="ctrl-btn" id="volumeBtn" title="Mute / Unmute (M)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          </svg>
+        </button>
+        <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="80">
+      </div>
+
+      <button class="icon-btn" id="lyricsToggleBtn" title="Synchronized Lyrics (L)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 18V5l12-2v13"></path>
+          <circle cx="6" cy="18" r="3"></circle>
+          <circle cx="18" cy="16" r="3"></circle>
+        </svg>
+      </button>
+
+      <button class="icon-btn" id="queueToggleBtn" title="Up Next Queue (Q)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="8" y1="6" x2="21" y2="6"></line>
+          <line x1="8" y1="12" x2="21" y2="12"></line>
+          <line x1="8" y1="18" x2="21" y2="18"></line>
+          <line x1="3" y1="6" x2="3.01" y2="6"></line>
+          <line x1="3" y1="12" x2="3.01" y2="12"></line>
+          <line x1="3" y1="18" x2="3.01" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+  </footer>
+
+  <!-- 3. iPod Classic Neumorphic Click Wheel Player (Bottom Left Screen in reference image) -->
+  <section class="ipod-player-overlay" id="ipodPlayerModal" style="display:none;">
+    <div class="ipod-frame-container">
+      <!-- Top Navigation -->
+      <div class="ipod-top-bar">
+        <button class="ipod-header-btn" id="ipodBackBtn" title="Back to Previous View">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <span class="ipod-album-tag" id="ipodAlbumTag">SWEETENER</span>
+        <button class="ipod-header-btn" id="ipodMenuBtn" title="Options">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+        </button>
+      </div>
+
+      <!-- Large Squircle Album Art -->
+      <div class="ipod-art-wrapper">
+        <img id="ipodCoverImg" class="ipod-album-art" src="icons/sweetener_cover.png" alt="Album Cover" />
+      </div>
+
+      <!-- Song Title & Artist -->
+      <div class="ipod-song-meta">
+        <h2 class="ipod-song-title" id="ipodTitle">lovely (with Khalid)</h2>
+        <div class="ipod-song-artist" id="ipodArtist">Billie Eilish</div>
+      </div>
+
+      <!-- Scrubber Timeline -->
+      <div class="ipod-timeline">
+        <span class="ipod-time" id="ipodCurrentTime">0:20</span>
+        <div class="ipod-rail" id="ipodProgressRail">
+          <div class="ipod-fill" id="ipodProgressFill" style="width: 25%;"></div>
+          <div class="ipod-thumb" id="ipodProgressThumb" style="left: 25%;"></div>
+        </div>
+        <span class="ipod-time" id="ipodRemainingTime">-3:28</span>
+      </div>
+
+      <!-- Tactile Neumorphic Click Wheel -->
+      <div class="ipod-wheel-stage">
+        <div class="ipod-click-wheel" id="ipodClickWheel">
+          <!-- Top: Shuffle -->
+          <button class="wheel-btn wheel-top" id="wheelShuffleBtn" title="Shuffle Mode">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+          </button>
+
+          <!-- Left: Previous -->
+          <button class="wheel-btn wheel-left" id="wheelPrevBtn" title="Previous Track">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+          </button>
+
+          <!-- Right: Next -->
+          <button class="wheel-btn wheel-right" id="wheelNextBtn" title="Next Track">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+          </button>
+
+          <!-- Bottom: Play / Pause -->
+          <button class="wheel-btn wheel-bottom" id="wheelPlayBtn" title="Play / Pause">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          </button>
+
+          <!-- Center: Tactile Action Button -->
+          <div class="wheel-center-btn" id="wheelCenterBtn" title="Select / Action"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Fullscreen Karaoke Lyrics Overlay -->
+  <section class="lyrics-overlay" id="lyricsOverlay">
+    <div class="lyrics-header">
+      <div class="brand-section">
+        <span class="brand-title">Karaoke Synchronized Lyrics</span>
+        <span class="brand-badge">LRCLIB Powered</span>
+      </div>
+      <button class="icon-btn" id="closeLyricsBtn" title="Close Lyrics (Esc or L)">✕</button>
+    </div>
+
+    <div class="lyrics-body">
+      <!-- Vinyl Player Stage -->
+      <div class="vinyl-stage">
+        <div class="vinyl-disc paused" id="vinylDisc">
+          <div class="vinyl-grooves"></div>
+          <div class="vinyl-label">
+            <img id="vinylCover" src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&auto=format&fit=crop&q=80" alt="Cover">
+          </div>
+          <div class="vinyl-center-hole"></div>
+        </div>
+        <div class="vinyl-track-info">
+          <h2 class="vinyl-title" id="vinylTitle">No Song Playing</h2>
+          <div class="vinyl-artist" id="vinylArtist">Select a track to start singing</div>
+        </div>
+      </div>
+
+      <!-- Real-time Karaoke Stream -->
+      <div class="lyrics-stream-container" id="lyricsStream">
+        <div class="lyrics-plain">
+          <p>Play any song to display synchronized karaoke lyrics.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Up Next Queue Drawer -->
+  <aside class="queue-drawer" id="queueDrawer">
+    <div class="queue-header">
+      <div style="font-weight: 800; font-size: 1.1rem;">Up Next Queue</div>
+      <div style="display: flex; gap: 8px;">
+        <button id="clearQueueBtn" style="background:none; border:none; color:var(--text-subtle); cursor:pointer; font-size:0.8rem;">Clear</button>
+        <button id="closeQueueBtn" class="icon-btn" style="width:30px; height:30px;">✕</button>
+      </div>
+    </div>
+    <div class="queue-list" id="queueList"></div>
+  </aside>
+
+  <!-- Hidden YouTube IFrame Container for Seamless Background Playback -->
+  <div id="yt-player-container"></div>
+
+  <!-- Scripts -->
+  <script src="js/clientCatalog.js?v=v7_mobile_home_design"></script>
+  <script src="js/player.js?v=v7_mobile_home_design"></script>
+  <script src="js/lyrics.js?v=v7_mobile_home_design"></script>
+  <script src="js/app.js?v=v7_mobile_home_design"></script>
+
+  <!-- PWA Service Worker & Install Prompt -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('SimpMusic PWA ServiceWorker active:', reg.scope))
+          .catch(err => console.log('ServiceWorker registration skipped:', err));
+      });
+    }
+
+    let deferredPrompt = null;
+    const installBtn = document.getElementById('pwaInstallBtn');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      if (installBtn) installBtn.style.display = 'inline-flex';
+    });
+
+    if (installBtn) {
+      installBtn.addEventListener('click', async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          installBtn.style.display = 'none';
+        }
+        deferredPrompt = null;
+      });
+    }
+
+    window.addEventListener('appinstalled', () => {
+      if (installBtn) installBtn.style.display = 'none';
+      console.log('SimpMusic PWA successfully installed!');
+    });
+  </script>
+</body>
+</html>
