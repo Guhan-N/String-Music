@@ -3,7 +3,7 @@
  * Enables offline caching, background playback reliability, and 1-tap installation
  */
 
-const CACHE_NAME = 'simpmusic-cache-v10';
+const CACHE_NAME = 'simpmusic-cache-v11';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
