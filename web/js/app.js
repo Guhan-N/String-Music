@@ -356,10 +356,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (suggestionsBox) suggestionsBox.classList.remove('active');
 
-    // If on mobile screen, toggle tracklist view so search results are prominent
+    // If on mobile screen, seamlessly route to dedicated mobile search view
     if (window.innerWidth <= 900) {
-      if (desktopTracklistView) desktopTracklistView.style.display = 'block';
-      if (mobileHomeView) mobileHomeView.style.display = 'none';
+      switchMobileView('search');
+      if (mobileSearchInput) mobileSearchInput.value = cleanQ;
+      performMobileSearch(cleanQ);
+      return;
     }
     isSearchActive = true;
 
@@ -398,7 +400,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 2. Standalone zero-failure fallback if backend returned empty or was unreachable
     if (!results || results.length === 0) {
       if (typeof window.clientSearch === 'function') {
-        results = window.clientSearch(cleanQ);
+        results = await window.clientSearch(cleanQ);
       }
     }
 
@@ -1067,80 +1069,43 @@ document.addEventListener('DOMContentLoaded', () => {
     updateDeviceProfileUI();
   };
 
-  function renderMobileRecentSongs() {
-    const row1 = document.getElementById('mobileRecentRow1');
-    const row2 = document.getElementById('mobileRecentRow2');
-    if (!row1 || !row2) return;
-
-    const listToRender = (recentSongs && recentSongs.length > 0) ? recentSongs : defaultStarterRecents;
-
-    row1.innerHTML = '';
-    row2.innerHTML = '';
-
-    const mid = Math.ceil(listToRender.length / 2);
-    const row1Items = listToRender.slice(0, mid);
-    const row2Items = listToRender.slice(mid);
-
-    function createRecentCard(track) {
-      const card = document.createElement('div');
-      card.className = 'mobile-v2-pick-card';
-      card.dataset.video = track.videoId;
-      card.dataset.title = track.title;
-      card.dataset.artist = track.artist;
-      card.innerHTML = `
-        <div class="mobile-v2-pick-thumb-wrap">
-          <img class="mobile-v2-pick-img" src="${track.thumbnail}" alt="${escapeHtml(track.title)}" onerror="this.src='https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=200&auto=format&fit=crop&q=80'" />
-          <div class="mobile-v2-pick-play-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-          </div>
-        </div>
-        <div class="mobile-v2-pick-name" title="${escapeHtml(track.title)}">${escapeHtml(track.title)}</div>
-        <div class="mobile-v2-pick-sub" title="${escapeHtml(track.artist)}">${escapeHtml(track.artist)}</div>
-      `;
+  // Setup Top Picks cards click handlers
+  function initMobileHomeHandlers() {
+    document.querySelectorAll('.mobile-v2-pick-card').forEach(card => {
       card.addEventListener('click', () => {
-        player.playTrack(track, listToRender);
+        const vid = card.dataset.video || '4NRXx6U8ABQ';
+        const title = card.dataset.title || card.querySelector('.mobile-v2-pick-name')?.textContent || 'Song';
+        const artist = card.dataset.artist || card.querySelector('.mobile-v2-pick-sub')?.textContent || 'Artist';
+        const img = card.querySelector('img')?.src || 'images/mobile/card_landscape.png';
+        const trackObj = { videoId: vid, title, artist, album: 'Top Picks', duration: '3:20', durationSec: 200, thumbnail: img };
+        player.playTrack(trackObj, [trackObj]);
         if (mobileMiniDock) mobileMiniDock.style.display = 'flex';
-        showToast(`Playing ${track.title}`);
+        showToast(`Playing ${title}`);
       });
-      return card;
-    }
-
-    row1Items.forEach(t => row1.appendChild(createRecentCard(t)));
-    row2Items.forEach(t => row2.appendChild(createRecentCard(t)));
-  }
-
-  const mobileClearRecentsBtn = document.getElementById('mobileClearRecentsBtn');
-  const mobileClearRecentsSettingsBtn = document.getElementById('mobileClearRecentsSettingsBtn');
-
-  function clearRecentSongs() {
-    recentSongs = [];
-    localStorage.removeItem('simpmusic_recent_songs');
-    renderMobileRecentSongs();
-    updateDeviceProfileUI();
-    showToast('Recent songs history cleared');
-  }
-
-  if (mobileClearRecentsBtn) mobileClearRecentsBtn.addEventListener('click', clearRecentSongs);
-  if (mobileClearRecentsSettingsBtn) mobileClearRecentsSettingsBtn.addEventListener('click', clearRecentSongs);
-
-  // New releases cards click handler
-  document.querySelectorAll('#mobileNewReleasesList .mobile-v2-release-item').forEach(item => {
-    item.addEventListener('click', (e) => {
-      if (e.target.closest('.mobile-v2-more-btn')) {
-        e.stopPropagation();
-        showToast(`Options: ${item.dataset.title || 'Song'}`);
-        return;
-      }
-      const vid = item.dataset.video || '2bJKg73Q_S4';
-      const title = item.dataset.title || 'Song';
-      const artist = item.dataset.artist || 'Artist';
-      const img = item.querySelector('img')?.src || 'images/mobile/thumb_new_releases.png';
-      const trackObj = { videoId: vid, title, artist, album: 'New Releases', duration: '3:20', durationSec: 200, thumbnail: img };
-      player.playTrack(trackObj, [trackObj]);
-      if (mobileMiniDock) mobileMiniDock.style.display = 'flex';
-      showToast(`Playing ${title}`);
     });
-  });
+
+    // New releases cards click handler
+    document.querySelectorAll('#mobileNewReleasesList .mobile-v2-release-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        if (e.target.closest('.mobile-v2-more-btn')) {
+          e.stopPropagation();
+          const title = item.dataset.title || 'Song';
+          showToast(`Options: ${title}`);
+          return;
+        }
+        const vid = item.dataset.video || '2bJKg73Q_S4';
+        const title = item.dataset.title || item.querySelector('.mobile-v2-release-title')?.textContent || 'Song';
+        const artist = item.dataset.artist || item.querySelector('.mobile-v2-release-artist')?.textContent || 'Billie Eilish';
+        const img = item.querySelector('img')?.src || 'images/mobile/thumb_new_releases.png';
+        const trackObj = { videoId: vid, title, artist, album: 'New Releases', duration: '3:20', durationSec: 200, thumbnail: img };
+        player.playTrack(trackObj, [trackObj]);
+        if (mobileMiniDock) mobileMiniDock.style.display = 'flex';
+        showToast(`Playing ${title}`);
+      });
+    });
+  }
+
+  initMobileHomeHandlers();
 
   // ===================================================================
   // 2. Mobile View Routing & Navigation
@@ -1158,28 +1123,52 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function switchMobileView(viewName) {
     // Hide all main mobile subviews
-    if (mobileHomeView) mobileHomeView.style.display = 'none';
-    if (mobileSearchView) mobileSearchView.style.display = 'none';
-    if (mobileSettingsView) mobileSettingsView.style.display = 'none';
-    if (desktopTracklistView) desktopTracklistView.style.display = 'none';
-    if (settingsView) settingsView.style.display = 'none';
+    if (mobileHomeView) {
+      mobileHomeView.style.display = 'none';
+      mobileHomeView.classList.remove('active');
+    }
+    if (mobileSearchView) {
+      mobileSearchView.style.display = 'none';
+      mobileSearchView.classList.remove('active');
+    }
+    if (mobileSettingsView) {
+      mobileSettingsView.style.display = 'none';
+      mobileSettingsView.classList.remove('active');
+    }
+    if (desktopTracklistView) {
+      desktopTracklistView.style.display = 'none';
+    }
+    if (settingsView) {
+      settingsView.style.display = 'none';
+    }
 
     document.querySelectorAll('.mobile-v2-nav-item').forEach(b => b.classList.remove('active'));
 
     if (viewName === 'home') {
-      if (mobileHomeView) mobileHomeView.style.display = 'block';
+      if (mobileHomeView) {
+        mobileHomeView.style.display = 'block';
+        mobileHomeView.classList.add('active');
+      }
       navHomeBtn?.classList.add('active');
     } else if (viewName === 'search') {
-      if (mobileSearchView) mobileSearchView.style.display = 'block';
+      if (mobileSearchView) {
+        mobileSearchView.style.display = 'block';
+        mobileSearchView.classList.add('active');
+      }
       navSearchBtn?.classList.add('active');
       renderMobileSearchHistory();
       setTimeout(() => mobileSearchInput?.focus(), 150);
     } else if (viewName === 'library') {
-      if (desktopTracklistView) desktopTracklistView.style.display = 'block';
+      if (desktopTracklistView) {
+        desktopTracklistView.style.display = 'block';
+      }
       navPlaylistBtn?.classList.add('active');
       showToast('Viewing Library & Tracks');
     } else if (viewName === 'settings') {
-      if (mobileSettingsView) mobileSettingsView.style.display = 'block';
+      if (mobileSettingsView) {
+        mobileSettingsView.style.display = 'block';
+        mobileSettingsView.classList.add('active');
+      }
       navProfileBtn?.classList.add('active');
       updateDeviceProfileUI();
     }
@@ -1290,8 +1279,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const q = mobileSearchInput.value.trim();
         if (q) {
           if (mobileSearchSuggestions) mobileSearchSuggestions.classList.remove('active');
+          mobileSearchInput.blur();
           performMobileSearch(q);
         }
+      }
+    });
+
+    // Support virtual mobile search keyboards
+    mobileSearchInput.addEventListener('search', () => {
+      const q = mobileSearchInput.value.trim();
+      if (q) {
+        if (mobileSearchSuggestions) mobileSearchSuggestions.classList.remove('active');
+        mobileSearchInput.blur();
+        performMobileSearch(q);
       }
     });
   }
@@ -1312,15 +1312,19 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       let suggestions = [];
       if (!isCloudMode) {
-        const endpoint = API_BASE ? `${API_BASE}/api/suggestions?q=${encodeURIComponent(query)}` : `/api/suggestions?q=${encodeURIComponent(query)}`;
-        const res = await fetch(endpoint);
-        if (res.ok) suggestions = await res.json();
+        try {
+          const endpoint = API_BASE ? `${API_BASE}/api/suggestions?q=${encodeURIComponent(query)}` : `/api/suggestions?q=${encodeURIComponent(query)}`;
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 2000);
+          const res = await fetch(endpoint, { signal: controller.signal });
+          clearTimeout(timer);
+          if (res.ok) suggestions = await res.json();
+        } catch (e) {}
       }
       if (!suggestions || suggestions.length === 0) {
-        // Fallback search local catalog
-        const allSongs = [...(CLIENT_CATALOG.global || []), ...(CLIENT_CATALOG.sweetener || [])];
-        const matches = allSongs.filter(s => s.title.toLowerCase().includes(query.toLowerCase()) || s.artist.toLowerCase().includes(query.toLowerCase()));
-        suggestions = matches.map(s => s.title).slice(0, 6);
+        if (typeof window.getClientSuggestions === 'function') {
+          suggestions = window.getClientSuggestions(query);
+        }
       }
 
       if (suggestions && suggestions.length > 0) {
@@ -1355,7 +1359,7 @@ document.addEventListener('DOMContentLoaded', () => {
       mobileSearchResultsList.innerHTML = `
         <div style="text-align:center; padding:30px; color:#71717a;">
           <div style="font-size:1.5rem; margin-bottom:8px;">🔍</div>
-          <div>Finding songs for "${escapeHtml(cleanQ)}"...</div>
+          <div>Searching YouTube Music for "${escapeHtml(cleanQ)}"...</div>
         </div>
       `;
     }
@@ -1363,22 +1367,20 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       let results = [];
       if (!isCloudMode) {
-        const searchEndpoint = API_BASE ? `${API_BASE}/api/search?q=${encodeURIComponent(cleanQ)}` : `/api/search?q=${encodeURIComponent(cleanQ)}`;
-        const res = await fetch(searchEndpoint);
-        if (res.ok) {
-          results = await res.json();
-        }
+        try {
+          const searchEndpoint = API_BASE ? `${API_BASE}/api/search?q=${encodeURIComponent(cleanQ)}` : `/api/search?q=${encodeURIComponent(cleanQ)}`;
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 4000);
+          const res = await fetch(searchEndpoint, { signal: controller.signal });
+          clearTimeout(timer);
+          if (res.ok) {
+            results = await res.json();
+          }
+        } catch (e) {}
       }
       if (!results || results.length === 0) {
-        // Standalone local client catalog search
-        const allLocal = [...(CLIENT_CATALOG.global || []), ...(CLIENT_CATALOG.sweetener || [])];
-        results = allLocal.filter(t => 
-          t.title.toLowerCase().includes(cleanQ.toLowerCase()) ||
-          t.artist.toLowerCase().includes(cleanQ.toLowerCase()) ||
-          (t.album && t.album.toLowerCase().includes(cleanQ.toLowerCase()))
-        );
-        if (results.length === 0) {
-          results = allLocal.slice(0, 8); // friendly fallback
+        if (typeof window.clientSearch === 'function') {
+          results = await window.clientSearch(cleanQ);
         }
       }
 
@@ -1677,12 +1679,26 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Initial Mobile Ecosystem Initialization
-  renderMobileRecentSongs();
+  initMobileHomeHandlers();
   renderMobileSearchHistory();
   updateDeviceProfileUI();
-  if (window.innerWidth <= 900) {
-    switchMobileView('home');
+
+  function handleResponsiveLayout() {
+    if (window.innerWidth <= 900) {
+      if (!mobileSearchView?.classList.contains('active') && 
+          !mobileSettingsView?.classList.contains('active') && 
+          desktopTracklistView?.style.display !== 'block') {
+        switchMobileView('home');
+      }
+    } else {
+      if (desktopTracklistView) desktopTracklistView.style.display = 'block';
+      if (mobileHomeView) mobileHomeView.style.display = 'none';
+      if (mobileSearchView) mobileSearchView.style.display = 'none';
+      if (mobileSettingsView) mobileSettingsView.style.display = 'none';
+    }
   }
+  window.addEventListener('resize', handleResponsiveLayout);
+  handleResponsiveLayout();
 
   // Initial Load with automatic network probing (Loads sweetener playlist by default)
   if (typeof probeBackend === 'function') {

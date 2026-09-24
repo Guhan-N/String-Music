@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=v9_recent_search_settings">
+  <link rel="stylesheet" href="css/style.css?v=v11_mobile_v2_complete">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23a855f7'><path d='M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z'/></svg>">
   <!-- PWA & Mobile Installability -->
   <link rel="manifest" href="./manifest.json">
@@ -173,52 +173,120 @@
       <!-- 2. Mobile Home View (Matching Reference Phone Image) -->
       <!-- 2. Mobile Views Ecosystem -->
       <!-- A. Mobile Home View -->
+      <!-- A. Mobile Home View (Matching Reference Phone Image) -->
       <div id="mobileHomeView" class="content-subview mobile-subview" style="display:none;">
         <div class="mobile-v2-container">
-          <!-- Top Header: S Logo + SimpMusic & AD-FREE Pill + Settings Icon -->
+          <!-- Top Header: S Logo + SimpMusic & AD-FREE Pill -->
           <div class="mobile-v2-header">
             <div class="mobile-v2-brand">
               <div class="mobile-v2-s-badge">S</div>
               <span class="mobile-v2-title">SimpMusic</span>
             </div>
-            <div style="display:flex; align-items:center; gap:8px;">
-              <div class="mobile-v2-adfree-pill">AD-FREE</div>
-              <button class="mobile-header-settings-btn" id="mobileHeaderSettingsBtn" title="Settings">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="3"></circle>
-                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          <!-- Mobile Home Quick Search Input Trigger -->
-          <div class="mobile-search-trigger-wrap" id="mobileSearchTrigger">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" color="#a1a1aa">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <span class="mobile-search-trigger-placeholder">Search songs, artists, lyrics...</span>
-            <span class="mobile-search-trigger-badge">⚡</span>
+            <div class="mobile-v2-adfree-pill">AD-FREE</div>
           </div>
 
           <!-- Section Subtitle: HOME -->
           <div class="mobile-v2-page-sub">HOME</div>
 
-          <!-- Section 1: RECENT SONGS (Replaced Top Picks) -->
-          <div class="mobile-v2-section" id="mobileRecentSection">
-            <div class="mobile-v2-section-header-row">
-              <div>
-                <div class="mobile-v2-subheading">JUMP BACK IN</div>
-                <h2 class="mobile-v2-heading">Recent Songs</h2>
-              </div>
-              <button class="mobile-v2-clear-recent-btn" id="mobileClearRecentsBtn" title="Clear recent songs">Clear</button>
-            </div>
+          <!-- Section 1: FOR YOU / Top Picks -->
+          <div class="mobile-v2-section" id="mobileTopPicksSection">
+            <div class="mobile-v2-subheading">FOR YOU</div>
+            <h2 class="mobile-v2-heading">Top Picks</h2>
 
-            <div class="mobile-v2-picks-scroll" id="mobileRecentScroll">
-              <!-- Dynamically rendered via renderMobileRecentSongs() in app.js -->
-              <div class="mobile-v2-picks-row" id="mobileRecentRow1"></div>
-              <div class="mobile-v2-picks-row" id="mobileRecentRow2"></div>
+            <div class="mobile-v2-picks-scroll" id="mobileTopPicksScroll">
+              <!-- Row 1 -->
+              <div class="mobile-v2-picks-row" id="mobilePicksRow1">
+                <div class="mobile-v2-pick-card" data-video="4NRXx6U8ABQ" data-title="Landscape" data-artist="Generic">
+                  <div class="mobile-v2-pick-thumb-wrap">
+                    <img class="mobile-v2-pick-img" src="images/mobile/card_landscape.png" alt="Landscape" />
+                    <div class="mobile-v2-pick-play-icon">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                    </div>
+                  </div>
+                  <div class="mobile-v2-pick-name">Landscape</div>
+                  <div class="mobile-v2-pick-sub">Generic</div>
+                </div>
+
+                <div class="mobile-v2-pick-card" data-video="JGwWNGJdvx8" data-title="Generic" data-artist="Generic">
+                  <div class="mobile-v2-pick-thumb-wrap">
+                    <img class="mobile-v2-pick-img" src="images/mobile/card_generic_man.png" alt="Generic" />
+                    <div class="mobile-v2-pick-play-icon">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                    </div>
+                  </div>
+                  <div class="mobile-v2-pick-name">Generic</div>
+                  <div class="mobile-v2-pick-sub">Generic</div>
+                </div>
+
+                <div class="mobile-v2-pick-card" data-video="e-ORhEE9VVg" data-title="The Pick" data-artist="Generic">
+                  <div class="mobile-v2-pick-thumb-wrap">
+                    <img class="mobile-v2-pick-img" src="images/mobile/card_the_pick.png" alt="The Pick" />
+                    <div class="mobile-v2-pick-play-icon">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                    </div>
+                  </div>
+                  <div class="mobile-v2-pick-name">The Pick</div>
+                  <div class="mobile-v2-pick-sub">Generic</div>
+                </div>
+
+                <div class="mobile-v2-pick-card" data-video="yaJx0Gj_lcY" data-title="W..." data-artist="Billie Eilish">
+                  <div class="mobile-v2-pick-thumb-wrap">
+                    <img class="mobile-v2-pick-img" src="images/mobile/card_row1_peek.png" alt="W..." />
+                    <div class="mobile-v2-pick-play-icon">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                    </div>
+                  </div>
+                  <div class="mobile-v2-pick-name">W...</div>
+                  <div class="mobile-v2-pick-sub">Billie Eilish</div>
+                </div>
+              </div>
+
+              <!-- Row 2 -->
+              <div class="mobile-v2-picks-row" id="mobilePicksRow2">
+                <div class="mobile-v2-pick-card" data-video="V1Pl8CzNzCw" data-title="Lovely" data-artist="Generic">
+                  <div class="mobile-v2-pick-thumb-wrap">
+                    <img class="mobile-v2-pick-img" src="images/mobile/card_lovely_weeknd.png" alt="Lovely" />
+                    <div class="mobile-v2-pick-play-icon">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                    </div>
+                  </div>
+                  <div class="mobile-v2-pick-name">Lovely</div>
+                  <div class="mobile-v2-pick-sub">Generic</div>
+                </div>
+
+                <div class="mobile-v2-pick-card" data-video="3_g2un5M350" data-title="The Biremes..." data-artist="Generic">
+                  <div class="mobile-v2-pick-thumb-wrap">
+                    <img class="mobile-v2-pick-img" src="images/mobile/card_biremes_man.png" alt="The Biremes..." />
+                    <div class="mobile-v2-pick-play-icon">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                    </div>
+                  </div>
+                  <div class="mobile-v2-pick-name">The Biremes...</div>
+                  <div class="mobile-v2-pick-sub">Generic</div>
+                </div>
+
+                <div class="mobile-v2-pick-card" data-video="Ah0Ys50CqO8" data-title="you should s..." data-artist="Billie Eilish">
+                  <div class="mobile-v2-pick-thumb-wrap">
+                    <img class="mobile-v2-pick-img" src="images/mobile/card_blonde_billie.png" alt="you should see me in a crown" />
+                    <div class="mobile-v2-pick-play-icon">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                    </div>
+                  </div>
+                  <div class="mobile-v2-pick-name">you should s...</div>
+                  <div class="mobile-v2-pick-sub">Billie Eilish</div>
+                </div>
+
+                <div class="mobile-v2-pick-card" data-video="2bJKg73Q_S4" data-title="Sw..." data-artist="Billie Eilish">
+                  <div class="mobile-v2-pick-thumb-wrap">
+                    <img class="mobile-v2-pick-img" src="images/mobile/card_row2_peek.png" alt="Sweetener" />
+                    <div class="mobile-v2-pick-play-icon">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                    </div>
+                  </div>
+                  <div class="mobile-v2-pick-name">Sw...</div>
+                  <div class="mobile-v2-pick-sub">Billie Eilish</div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -897,10 +965,10 @@
   <div id="yt-player-container"></div>
 
   <!-- Scripts -->
-  <script src="js/clientCatalog.js?v=v9_recent_search_settings"></script>
-  <script src="js/player.js?v=v9_recent_search_settings"></script>
-  <script src="js/lyrics.js?v=v9_recent_search_settings"></script>
-  <script src="js/app.js?v=v9_recent_search_settings"></script>
+  <script src="js/clientCatalog.js?v=v10_mobile_home_toppicks"></script>
+  <script src="js/player.js?v=v10_mobile_home_toppicks"></script>
+  <script src="js/lyrics.js?v=v10_mobile_home_toppicks"></script>
+  <script src="js/app.js?v=v10_mobile_home_toppicks"></script>
 
   <!-- PWA Service Worker & Install Prompt -->
   <script>

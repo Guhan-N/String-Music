@@ -1586,7 +1586,11 @@ body {
   display: block;
 }
 
-#mobileHomeView {
+.mobile-subview {
+  display: none !important;
+}
+
+.mobile-v2-bottom-bar {
   display: none !important;
 }
 
@@ -1598,6 +1602,7 @@ body {
   html, body {
     background: #18181a !important;
     background-color: #18181a !important;
+    overflow-x: hidden !important;
   }
   .top-bar {
     display: none !important;
@@ -1612,11 +1617,13 @@ body {
     display: none !important;
   }
   .app-container {
+    display: block !important;
     grid-template-columns: 1fr !important;
     grid-template-rows: 1fr !important;
     height: auto !important;
     min-height: 100vh !important;
     background: #18181a !important;
+    padding-bottom: 80px !important;
   }
   .main-content {
     grid-column: 1 / -1 !important;
@@ -1624,14 +1631,25 @@ body {
     padding: 0 !important;
     display: block !important;
     background: #18181a !important;
+    min-height: 100vh !important;
   }
   #desktopTracklistView {
     display: none;
+    padding: 16px;
   }
   .mobile-subview {
+    display: none;
     width: 100%;
     min-height: 100vh;
     background: #18181a;
+  }
+  .mobile-subview.active,
+  .mobile-subview[style*="display: block"],
+  .mobile-subview[style*="display: flex"] {
+    display: block !important;
+  }
+  .mobile-v2-bottom-bar {
+    display: flex !important;
   }
   .mobile-mini-dock {
     display: flex !important;
@@ -2945,6 +2963,826 @@ body.amoled-mode .mobile-setting-card,
 body.amoled-mode .mobile-v2-bottom-bar,
 body.amoled-mode .mobile-mini-dock {
   background: #0a0a0a !important;
+}
+
+/* ===================================================================
+   MOBILE V2 – Complete Responsive Styles
+   =================================================================== */
+
+/* ---------------------------------------------------------------
+   Global Responsive: Hide desktop elements on mobile
+--------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .top-bar,
+  .sidebar,
+  .player-dock,
+  #desktopTracklistView {
+    display: none !important;
+  }
+
+  .app-container {
+    display: block;
+    padding: 0;
+  }
+
+  .main-content {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    min-height: 100vh;
+    background: #0c0d11;
+  }
+
+  body {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
+/* ---------------------------------------------------------------
+   Mobile Subview Base
+--------------------------------------------------------------- */
+.mobile-subview {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* ---------------------------------------------------------------
+   Mobile V2 Container
+--------------------------------------------------------------- */
+.mobile-v2-container {
+  background: #0c0d11;
+  min-height: 100vh;
+  width: 100%;
+  padding-bottom: 120px;
+  overflow-x: hidden;
+}
+
+/* ---------------------------------------------------------------
+   Mobile V2 Header
+--------------------------------------------------------------- */
+.mobile-v2-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 52px 20px 16px 20px;
+  background: linear-gradient(180deg, rgba(12,13,17,1) 60%, rgba(12,13,17,0) 100%);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.mobile-v2-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mobile-v2-s-badge {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #a855f7, #7c3aed);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(168, 85, 247, 0.45);
+}
+
+.mobile-v2-title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.3px;
+}
+
+.mobile-v2-adfree-pill {
+  background: rgba(168, 85, 247, 0.18);
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  color: #c084fc;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  letter-spacing: 0.5px;
+}
+
+.mobile-v2-page-sub {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #6b7280;
+  letter-spacing: 1.5px;
+  padding: 0 20px 8px 20px;
+  text-transform: uppercase;
+}
+
+/* ---------------------------------------------------------------
+   Mobile V2 Section
+--------------------------------------------------------------- */
+.mobile-v2-section {
+  padding: 12px 0 0 0;
+}
+
+.mobile-v2-subheading {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #6b7280;
+  letter-spacing: 1.5px;
+  padding: 0 20px;
+  text-transform: uppercase;
+}
+
+.mobile-v2-heading {
+  font-size: 1.55rem;
+  font-weight: 800;
+  color: #ffffff;
+  padding: 4px 20px 14px 20px;
+  letter-spacing: -0.5px;
+}
+
+/* ---------------------------------------------------------------
+   Mobile V2 Top Picks Scroll + Grid
+--------------------------------------------------------------- */
+.mobile-v2-picks-scroll {
+  padding: 0 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mobile-v2-picks-row {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 4px;
+}
+
+.mobile-v2-picks-row::-webkit-scrollbar {
+  display: none;
+}
+
+.mobile-v2-pick-card {
+  flex: 0 0 140px;
+  background: #15161c;
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.06);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  position: relative;
+}
+
+.mobile-v2-pick-card:active {
+  transform: scale(0.95);
+}
+
+.mobile-v2-pick-thumb-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+}
+
+.mobile-v2-pick-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.mobile-v2-pick-card:hover .mobile-v2-pick-img {
+  transform: scale(1.05);
+}
+
+.mobile-v2-pick-play-icon {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.35);
+  color: white;
+  opacity: 0;
+  transition: opacity 0.18s;
+}
+
+.mobile-v2-pick-card:hover .mobile-v2-pick-play-icon,
+.mobile-v2-pick-card:active .mobile-v2-pick-play-icon {
+  opacity: 1;
+}
+
+.mobile-v2-pick-name {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #f0f0f0;
+  padding: 8px 10px 2px 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-v2-pick-sub {
+  font-size: 0.65rem;
+  color: #71717a;
+  padding: 0 10px 8px 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------------------------------------------------------------
+   Mobile V2 New Releases Section
+--------------------------------------------------------------- */
+.mobile-v2-releases-section {
+  margin-top: 24px;
+  padding: 0;
+}
+
+.mobile-v2-releases-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 20px;
+}
+
+.mobile-v2-release-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: background 0.15s;
+  border-radius: 10px;
+}
+
+.mobile-v2-release-item:last-child {
+  border-bottom: none;
+}
+
+.mobile-v2-release-item:active {
+  background: rgba(255,255,255,0.04);
+}
+
+.mobile-v2-release-thumb {
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #1a1b22;
+}
+
+.mobile-v2-release-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.mobile-v2-release-title {
+  font-size: 0.87rem;
+  font-weight: 700;
+  color: #f0f0f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-v2-release-artist {
+  font-size: 0.72rem;
+  color: #71717a;
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-v2-more-btn {
+  background: none;
+  border: none;
+  color: #52525b;
+  padding: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  border-radius: 8px;
+  transition: color 0.15s;
+  flex-shrink: 0;
+}
+
+.mobile-v2-more-btn:hover {
+  color: #a1a1aa;
+}
+
+/* ---------------------------------------------------------------
+   Mobile V2 Bottom Nav Bar
+--------------------------------------------------------------- */
+.mobile-v2-bottom-bar {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  background: rgba(14, 15, 20, 0.92);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-top: 1px solid rgba(255,255,255,0.07);
+  padding: 10px 0 calc(10px + env(safe-area-inset-bottom, 0px)) 0;
+  justify-content: space-around;
+  align-items: center;
+}
+
+@media (max-width: 900px) {
+  .mobile-v2-bottom-bar {
+    display: flex;
+  }
+}
+
+.mobile-v2-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: #52525b;
+  cursor: pointer;
+  padding: 4px 18px;
+  font-family: var(--font-family);
+  position: relative;
+  transition: color 0.18s;
+}
+
+.mobile-v2-nav-item span {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.mobile-v2-nav-item.active {
+  color: #a855f7;
+}
+
+.mobile-v2-nav-glow {
+  position: absolute;
+  top: -2px;
+  width: 30px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #a855f7, transparent);
+  border-radius: 9999px;
+  opacity: 0;
+  transition: opacity 0.18s;
+}
+
+.mobile-v2-nav-item.active .mobile-v2-nav-glow {
+  opacity: 1;
+}
+
+/* ---------------------------------------------------------------
+   Mobile Mini Dock (Floating Now Playing Pill)
+--------------------------------------------------------------- */
+.mobile-mini-dock {
+  display: none;
+  position: fixed;
+  bottom: 72px;
+  left: 12px;
+  right: 12px;
+  z-index: 190;
+  background: rgba(26, 27, 34, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 18px;
+  padding: 10px 14px;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  transition: transform 0.15s ease;
+}
+
+.mobile-mini-dock:active {
+  transform: scale(0.97);
+}
+
+@media (max-width: 900px) {
+  .mobile-mini-dock {
+    display: flex;
+  }
+}
+
+.mini-dock-thumb-wrap {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.mini-dock-thumb-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mini-dock-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.mini-dock-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mini-dock-artist {
+  font-size: 0.72rem;
+  color: #71717a;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mini-dock-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.mini-dock-btn {
+  background: none;
+  border: none;
+  color: #a1a1aa;
+  padding: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  border-radius: 10px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.mini-dock-btn:hover {
+  color: #ffffff;
+  background: rgba(255,255,255,0.08);
+}
+
+/* ---------------------------------------------------------------
+   Mobile Search View
+--------------------------------------------------------------- */
+.mobile-search-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 52px 16px 12px 16px;
+  background: linear-gradient(180deg, #0c0d11 70%, rgba(12,13,17,0) 100%);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.mobile-search-back-btn {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #ffffff;
+  border-radius: 50%;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.mobile-search-back-btn:hover {
+  background: rgba(255,255,255,0.12);
+}
+
+.mobile-search-input-box {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px;
+  padding: 0 12px;
+  height: 44px;
+}
+
+.mobile-search-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: #ffffff;
+  font-size: 0.92rem;
+  font-family: var(--font-family);
+}
+
+.mobile-search-input::placeholder {
+  color: #52525b;
+}
+
+.mobile-search-clear-btn {
+  background: none;
+  border: none;
+  color: #71717a;
+  cursor: pointer;
+  font-size: 0.85rem;
+  display: none;
+  padding: 2px 4px;
+}
+
+.mobile-search-clear-btn.active {
+  display: block;
+}
+
+.mobile-search-genres {
+  display: flex;
+  gap: 8px;
+  padding: 6px 20px 14px 20px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mobile-search-genres::-webkit-scrollbar {
+  display: none;
+}
+
+.mobile-genre-pill {
+  flex: 0 0 auto;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.09);
+  color: #a1a1aa;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  cursor: pointer;
+  font-family: var(--font-family);
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.mobile-genre-pill.active {
+  background: rgba(168, 85, 247, 0.2);
+  border-color: rgba(168, 85, 247, 0.5);
+  color: #c084fc;
+}
+
+.mobile-search-suggestions {
+  display: none;
+  background: rgba(20, 21, 27, 0.98);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  margin: 0 16px 10px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+
+.mobile-search-suggestions.active {
+  display: block;
+}
+
+.mobile-suggestion-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  color: #d1d5db;
+  cursor: pointer;
+  font-size: 0.87rem;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: background 0.12s;
+}
+
+.mobile-suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.mobile-suggestion-item:hover,
+.mobile-suggestion-item:active {
+  background: rgba(255,255,255,0.05);
+}
+
+.mobile-search-history-section {
+  padding: 0 20px;
+}
+
+.mobile-search-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.mobile-clear-history-btn {
+  background: none;
+  border: none;
+  color: #71717a;
+  font-size: 0.78rem;
+  cursor: pointer;
+  font-family: var(--font-family);
+}
+
+.mobile-search-chips-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mobile-search-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 9999px;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  color: #a1a1aa;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.mobile-search-chip:hover {
+  background: rgba(168, 85, 247, 0.12);
+  border-color: rgba(168, 85, 247, 0.3);
+  color: #c084fc;
+}
+
+.mobile-search-results-section {
+  margin-top: 20px;
+  padding: 0 0 8px 0;
+}
+
+.mobile-search-status-bar {
+  padding: 0 20px 10px 20px;
+}
+
+.mobile-search-results-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-search-result-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: background 0.12s;
+}
+
+.mobile-search-result-item:active {
+  background: rgba(255,255,255,0.05);
+}
+
+.mobile-result-thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #1a1b22;
+}
+
+.mobile-result-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.mobile-result-title {
+  font-size: 0.87rem;
+  font-weight: 700;
+  color: #f0f0f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-result-artist {
+  font-size: 0.72rem;
+  color: #71717a;
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-result-play-btn {
+  background: rgba(168,85,247,0.15);
+  border: none;
+  color: #a855f7;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.mobile-result-play-btn:hover {
+  background: rgba(168,85,247,0.3);
+}
+
+/* ---------------------------------------------------------------
+   Mobile Settings View specific
+--------------------------------------------------------------- */
+.mobile-settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 52px 20px 16px 20px;
+  background: linear-gradient(180deg, #0c0d11 70%, transparent 100%);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.mobile-settings-back-btn {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #ffffff;
+  border-radius: 50%;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+/* ---------------------------------------------------------------
+   Mobile Recent Songs Row (used inside home view)
+--------------------------------------------------------------- */
+.mobile-recent-row {
+  padding: 0 20px;
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.mobile-recent-row::-webkit-scrollbar {
+  display: none;
+}
+
+.mobile-recent-card {
+  flex: 0 0 120px;
+  background: #15161c;
+  border-radius: 14px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.06);
+  transition: transform 0.15s;
+}
+
+.mobile-recent-card:active {
+  transform: scale(0.94);
+}
+
+.mobile-recent-thumb {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+
+.mobile-recent-name {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #f0f0f0;
+  padding: 6px 8px 2px 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-recent-artist {
+  font-size: 0.65rem;
+  color: #71717a;
+  padding: 0 8px 7px 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 

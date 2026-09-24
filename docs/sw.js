@@ -3,16 +3,16 @@
  * Enables offline caching, background playback reliability, and 1-tap installation
  */
 
-const CACHE_NAME = 'simpmusic-cache-v2';
+const CACHE_NAME = 'simpmusic-cache-v10';
 const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/css/style.css',
-  '/js/clientCatalog.js',
-  '/js/player.js',
-  '/js/lyrics.js',
-  '/js/app.js',
-  '/manifest.json'
+  './',
+  './index.html',
+  './css/style.css',
+  './js/clientCatalog.js',
+  './js/player.js',
+  './js/lyrics.js',
+  './js/app.js',
+  './manifest.json'
 ];
 
 self.addEventListener('install', (event) => {
@@ -35,8 +35,6 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
-
   // Network first for all resources
   event.respondWith(
     fetch(event.request).then((networkResponse) => {
