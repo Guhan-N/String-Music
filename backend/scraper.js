@@ -252,7 +252,16 @@ const GENRE_QUERIES = {
   'pop': 'Top Pop Hits Trending',
   'hiphop': 'Hip Hop Hits Rap',
   'rock': 'Rock Classics Hits',
-  'indie': 'Indie Alternative Chill Hits'
+  'indie': 'Indie Alternative Chill Hits',
+  // Language categories (drives the one-time category picker)
+  'tamil': 'Tamil Latest Hit Songs',
+  'english': 'English Top Hits Songs',
+  'hindi': 'Hindi Latest Hit Songs',
+  'marathi': 'Marathi Latest Hit Songs',
+  'telugu': 'Telugu Latest Hit Songs',
+  'malayalam': 'Malayalam Latest Hit Songs',
+  'kannada': 'Kannada Latest Hit Songs',
+  'punjabi': 'Punjabi Latest Hit Songs'
 };
 
 async function getTrending(genre = 'global') {

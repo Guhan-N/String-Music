@@ -53,18 +53,41 @@ class LyricsController {
           throw new Error('Backend returned status ' + res.status);
         }
       } catch (backendErr) {
-        // Backend unreachable or standalone, query LRCLIB API directly
+        // Backend unreachable (e.g. Android APK: no Express server on device).
+        // Query LRCLIB directly — ALWAYS with the duration, otherwise LRCLIB
+        // often returns a different version (live/remix/sped-up) whose
+        // timestamps don't match the playing audio (lyrics desync).
         const cleanTitle = track.title.replace(/\(.*?\)|\[.*?\]/g, '').trim();
         const cleanArtist = (track.artist || '').replace(/\(.*?\)|\[.*?\]/g, '').trim();
-        const lrcRes = await fetch(`https://lrclib.net/api/get?track_name=${encodeURIComponent(cleanTitle)}&artist_name=${encodeURIComponent(cleanArtist)}`);
-        if (lrcRes.ok) {
-          const lrcData = await lrcRes.json();
-          data = {
-            isSynced: !!lrcData.syncedLyrics,
-            syncedLyrics: lrcData.syncedLyrics,
-            plainLyrics: lrcData.plainLyrics,
-            parsedLyrics: lrcData.syncedLyrics ? this.parseDirectLrc(lrcData.syncedLyrics) : []
-          };
+        const wantDur = Math.round(track.durationSec || 0);
+        const toData = (d) => ({
+          isSynced: !!d.syncedLyrics,
+          syncedLyrics: d.syncedLyrics,
+          plainLyrics: d.plainLyrics,
+          parsedLyrics: d.syncedLyrics ? this.parseDirectLrc(d.syncedLyrics) : []
+        });
+        try {
+          const lrcRes = await fetch(`https://lrclib.net/api/get?track_name=${encodeURIComponent(cleanTitle)}&artist_name=${encodeURIComponent(cleanArtist)}&duration=${wantDur}`);
+          if (lrcRes.ok) data = toData(await lrcRes.json());
+        } catch (e) { /* fall through to search */ }
+        // /api/get without a good match (or network hiccup): search and pick
+        // the result whose duration is closest to the playing track.
+        if (!data || (!data.isSynced && !data.plainLyrics)) {
+          try {
+            const sRes = await fetch(`https://lrclib.net/api/search?track_name=${encodeURIComponent(cleanTitle)}&artist_name=${encodeURIComponent(cleanArtist)}`);
+            if (sRes.ok) {
+              const list = await sRes.json();
+              if (Array.isArray(list) && list.length) {
+                const scored = list
+                  .filter(d => d.syncedLyrics || d.plainLyrics)
+                  .map(d => ({ d, diff: wantDur > 0 ? Math.abs((d.duration || 0) - wantDur) : 0 }))
+                  .sort((a, b) => a.diff - b.diff);
+                // Only accept a close-duration match; a far-off version would desync
+                const best = scored.find(s => wantDur === 0 || s.diff <= 8);
+                if (best) data = toData(best.d);
+              }
+            }
+          } catch (e) { /* no lyrics */ }
         }
       }
 

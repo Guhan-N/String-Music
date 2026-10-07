@@ -1,7 +1,7 @@
 {
-  "name": "SimpMusic - Ad-Free Music Streaming",
-  "short_name": "SimpMusic",
-  "description": "Ad-free YouTube Music player with real-time synchronized karaoke lyrics",
+  "name": "String Music - Ad-Free Music Streaming",
+  "short_name": "String Music",
+  "description": "Ad-free music player with real-time synchronized karaoke lyrics",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",

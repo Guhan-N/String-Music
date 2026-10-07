@@ -1,0 +1,143 @@
+/**
+ * Recommendation sections (v3.5) — For You rows on mobile Home + desktop.
+ * Reuses the app's visual language (cards, purple accent, soft glows).
+ */
+
+/* Mobile Home: For You section rows */
+#mobileRecoRows { display: flex; flex-direction: column; gap: 22px; }
+
+.reco-section { display: flex; flex-direction: column; gap: 10px; }
+
+.reco-section-title {
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #a855f7;
+  padding-left: 4px;
+}
+
+.reco-row {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding: 4px 4px 10px;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.reco-row::-webkit-scrollbar { display: none; }
+
+.reco-card {
+  position: relative;
+  flex: 0 0 auto;
+  width: 132px;
+  scroll-snap-align: start;
+  cursor: pointer;
+  border-radius: 16px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+.reco-card:hover {
+  transform: translateY(-3px);
+  background: rgba(168, 85, 247, 0.10);
+  border-color: rgba(168, 85, 247, 0.35);
+}
+.reco-card:active { transform: scale(0.97); }
+
+.reco-card-thumb-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.reco-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.reco-card-play {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: rgba(10, 8, 16, 0.35);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.reco-card:hover .reco-card-play,
+.reco-card:active .reco-card-play { opacity: 1; }
+.reco-card-play svg {
+  width: 40px;
+  height: 40px;
+  padding: 9px;
+  box-sizing: content-box;
+  background: rgba(168, 85, 247, 0.9);
+  border-radius: 50%;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5));
+}
+
+.reco-card-name {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #f4f4f5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reco-card-sub {
+  font-size: 0.72rem;
+  color: #a1a1aa;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+
+/* 3-dot menu on reco cards (same look as recent-menu-btn) */
+.reco-card .song-menu-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 8, 16, 0.72);
+  color: #d4d4d8;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.reco-card:hover .song-menu-btn,
+.reco-card:active .song-menu-btn { opacity: 1; }
+
+/* Desktop: render the same rows above the tracklist */
+#desktopRecoRows {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px 26px;
+  margin-bottom: 26px;
+}
+#desktopRecoRows .reco-section { min-width: 0; }
+#desktopRecoRows .reco-row { flex-wrap: wrap; overflow: visible; }
+#desktopRecoRows .reco-card { width: 118px; }
+
+@media (max-width: 900px) {
+  #desktopRecoRows { display: none; }
+}

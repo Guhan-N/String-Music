@@ -5,6 +5,8 @@ buildscript {
     repositories {
         google()
         mavenCentral()
+        // NewPipe Extractor (YouTube stream resolution) is published via JitPack
+        maven { url 'https://jitpack.io' }
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:8.2.1'
@@ -21,6 +23,8 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        // NewPipe Extractor (YouTube stream resolution) is published via JitPack
+        maven { url 'https://jitpack.io' }
     }
 }
 

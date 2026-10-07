@@ -1,0 +1,353 @@
+/* ==== Language Category Picker (one-time, first launch) ==== */
+.cat-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 8, 14, 0.97);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 24px;
+}
+.cat-overlay.active { display: flex; }
+
+.cat-logo {
+  font-size: 1.6rem;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: #fff;
+  margin-bottom: 4px;
+}
+.cat-logo span { color: var(--primary, #a855f7); }
+
+.cat-sub {
+  font-size: 0.85rem;
+  color: #9ca3af;
+  margin-bottom: 28px;
+  text-align: center;
+}
+
+.cat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(120px, 160px));
+  gap: 12px;
+  justify-content: center;
+  margin-bottom: 26px;
+  max-height: 46vh;
+  overflow-y: auto;
+  padding: 4px;
+}
+@media (min-width: 480px) {
+  .cat-grid { grid-template-columns: repeat(4, minmax(120px, 160px)); }
+}
+
+.cat-chip {
+  padding: 14px 10px;
+  border-radius: 16px;
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: #e5e7eb;
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.cat-chip:active { transform: scale(0.96); }
+.cat-chip.selected {
+  border-color: #a855f7 !important;
+  background: rgba(168, 85, 247, 0.16) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 18px rgba(168, 85, 247, 0.25);
+}
+
+.cat-continue {
+  padding: 13px 44px;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background: #a855f7 !important;          /* v3.12.1: hard purple, no var() */
+  color: #ffffff !important;               /* keep the label readable */
+  font-size: 0.95rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.1s ease;
+}
+.cat-continue:disabled {
+  background: rgba(255, 255, 255, 0.10) !important;
+  color: #71717a !important;
+  cursor: not-allowed;
+}
+.cat-continue:not(:disabled):active { transform: scale(0.97); }
+
+.cat-skip {
+  margin-top: 12px;
+  background: none;
+  border: none;
+  color: #6b7280;
+  font-size: 0.8rem;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* New releases rows rendered from selected categories */
+.cat-releases-list { display: flex; flex-direction: column; gap: 10px; }
+.cat-lang-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #9ca3af;
+  margin: 10px 4px 2px;
+}
+
+/* ==== Playlists ==== */
+.pl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 14px;
+  padding: 6px 4px 30px;
+}
+.pl-card {
+  position: relative;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 12px;
+  cursor: pointer;
+  transition: transform .15s ease, background .15s ease;
+}
+.pl-card:active { transform: scale(.97); }
+.pl-card-cover {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(168,85,247,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  margin-bottom: 10px;
+}
+.pl-card-cover img { width: 100%; height: 100%; object-fit: cover; }
+.pl-card-play {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: none;
+  background: var(--primary, #a855f7);
+  color: #fff;
+  font-size: 15px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity .15s ease;
+  box-shadow: 0 4px 14px rgba(0,0,0,.4);
+}
+.pl-card:hover .pl-card-play, .pl-card:focus-within .pl-card-play { opacity: 1; }
+@media (hover: none) { .pl-card-play { opacity: 1; } }
+.pl-card-name {
+  font-weight: 800;
+  font-size: .9rem;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pl-card-count { font-size: .75rem; color: #9ca3af; margin-top: 2px; }
+.pl-card-del {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0,0,0,.55);
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity .15s ease;
+}
+.pl-card:hover .pl-card-del { opacity: 1; }
+@media (hover: none) { .pl-card-del { opacity: .85; } }
+.pl-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: #71717a;
+  font-size: .85rem;
+  padding: 40px 12px;
+  line-height: 1.7;
+}
+.pl-overlay { z-index: 6000; }
+.pl-dialog {
+  background: #14141f;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 20px;
+  padding: 22px;
+  width: min(92vw, 380px);
+  box-shadow: 0 18px 50px rgba(0,0,0,.6);
+}
+.pl-dialog-title { color: #fff; font-weight: 800; font-size: 1.05rem; margin-bottom: 14px; }
+.pl-name-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.05);
+  color: #fff;
+  font-size: .95rem;
+  outline: none;
+  margin-bottom: 18px;
+  box-sizing: border-box;
+}
+.pl-name-input:focus { border-color: var(--primary, #a855f7); }
+.pl-dialog-actions { display: flex; gap: 10px; justify-content: flex-end; }
+.pl-btn { padding: 10px 20px; border-radius: 999px; border: none; font-weight: 700; cursor: pointer; }
+.pl-btn-ghost { background: rgba(255,255,255,0.08); color: #e5e7eb; }
+.pl-btn-primary { background: var(--primary, #a855f7); color: #fff; }
+.pl-sheet-wrap { justify-content: flex-end; padding: 0; }
+.pl-sheet {
+  width: 100%;
+  background: #14141f;
+  border-radius: 22px 22px 0 0;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  padding: 12px 14px calc(18px + env(safe-area-inset-bottom));
+  max-height: 75vh;
+  overflow-y: auto;
+  box-shadow: 0 -12px 40px rgba(0,0,0,0.45);
+}
+.pl-sheet-grab { width: 42px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.18); margin: 0 auto 12px; }
+.pl-sheet-song { display: flex; flex-direction: row; align-items: center; gap: 12px; padding: 0 2px 12px; border-bottom: 1px solid rgba(255,255,255,0.07); margin-bottom: 10px; }
+.pl-sheet-song-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pl-sheet-thumb { width: 46px; height: 46px; min-width: 46px; border-radius: 10px; object-fit: cover; background: rgba(255,255,255,0.06); display: block; }
+.pl-sheet-thumb-ph { display: flex; align-items: center; justify-content: center; font-size: 1.15rem; }
+.pl-sheet-song b { color: #fff; font-size: .95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pl-sheet-song span { color: #9ca3af; font-size: .78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pl-sheet-sep { font-size: .65rem; font-weight: 800; letter-spacing: 1.5px; color: #6b7280; margin: 8px 4px; }
+.pl-sheet-sep:empty { border-top: 1px solid rgba(255,255,255,0.06); height: 0; font-size: 0; margin: 8px 2px; }
+.pl-sheet-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  border: none;
+  background: rgba(255,255,255,0.04);
+  color: #e5e7eb;
+  border-radius: 12px;
+  font-size: .92rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 6px;
+}
+.pl-sheet-ico { width: 24px; min-width: 24px; text-align: center; font-size: 1rem; line-height: 1; }
+.pl-sheet-item:active { background: rgba(255,255,255,0.1); }
+.pl-sheet-danger { color: #f87171; background: rgba(248,113,113,0.07); }
+.pl-sheet-danger:active { background: rgba(248,113,113,0.16); }
+.pl-sheet-cancel { text-align: center; justify-content: center; color: #9ca3af; }
+
+/* ---------------- v3.19.2: playlist-download progress HUD ---------------- */
+.pl-dl-hud {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(146px + env(safe-area-inset-bottom, 0px));
+  margin: 0 auto;
+  max-width: 412px;
+  z-index: 10300; /* above overlays (10000/10100) so it is visible anywhere */
+  background: #17171d;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 18px;
+  padding: 14px 16px;
+  box-shadow: 0 14px 40px rgba(0,0,0,0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+}
+.pl-dl-hud.show {
+  opacity: 1;
+  transform: translateY(0) translateZ(0);
+  pointer-events: auto;
+}
+.pl-dl-hud-top { display: flex; align-items: center; gap: 12px; }
+.pl-dl-hud-info { flex: 1; min-width: 0; }
+.pl-dl-hud-title { color: #fff; font-weight: 800; font-size: 0.88rem; }
+.pl-dl-hud-song { color: #a1a1aa; font-size: 0.76rem; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pl-dl-hud-cancel {
+  background: rgba(248,113,113,0.1);
+  color: #f87171;
+  border: 1px solid rgba(248,113,113,0.25);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  flex: none;
+}
+.pl-dl-hud-cancel:active { background: rgba(248,113,113,0.2); }
+.pl-dl-hud-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.08);
+  overflow: hidden;
+}
+.pl-dl-hud-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #a855f7, #c084fc);
+  transition: width 0.3s ease;
+}
+.pl-dl-hud-meta { display: flex; justify-content: space-between; font-size: 0.72rem; color: #a1a1aa; font-weight: 600; }
+.pl-sheet-none { color: #6b7280; font-size: .8rem; padding: 6px; }
+
+/* ---------------- Add Songs overlay (playlist detail, Library-only) ---------------- */
+.pl-add-dialog { background:#1c1526; border:1px solid rgba(255,255,255,0.12); border-radius:16px; width:min(560px, 100%); max-height:80vh; display:flex; flex-direction:column; overflow:hidden; }
+.pl-add-head { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid rgba(255,255,255,0.08); }
+.pl-add-title-main { font-weight:800; font-size:16px; color:#fff; }
+.pl-add-close { background:none; border:none; color:rgba(255,255,255,0.7); font-size:16px; cursor:pointer; padding:4px 8px; }
+.pl-add-searchrow { display:flex; gap:8px; padding:12px 16px; }
+.pl-add-input { flex:1; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:999px; padding:9px 14px; color:#fff; font-size:14px; outline:none; }
+.pl-add-go { background:rgba(168,85,247,0.5); border:none; border-radius:999px; padding:9px 16px; color:#fff; font-weight:700; cursor:pointer; }
+.pl-add-results { overflow-y:auto; padding:4px 8px 12px; }
+.pl-add-hint { color:rgba(255,255,255,0.6); font-size:13px; padding:12px; text-align:center; }
+.pl-add-row { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:10px; cursor:pointer; }
+.pl-add-row:hover { background:rgba(255,255,255,0.06); }
+.pl-add-thumb { width:44px; height:44px; border-radius:8px; object-fit:cover; background:rgba(255,255,255,0.08); }
+.pl-add-info { flex:1; min-width:0; }
+.pl-add-title { color:#fff; font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pl-add-artist { color:rgba(255,255,255,0.55); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pl-add-btn { background:rgba(168,85,247,0.3); border:1px solid rgba(168,85,247,0.5); border-radius:999px; padding:6px 12px; color:#fff; font-size:12px; font-weight:700; cursor:pointer; }
+
+/* ---------------- iPod lyrics overlay (tap album art) ---------------- */
+.ipod-lyrics-stream { flex:1; overflow-y:auto; padding:22px 18px; scroll-behavior:smooth; }
+.ipod-lyrics-stream .lyric-line { color:rgba(255,255,255,0.45); font-size:13.5px; font-weight:600; line-height:1.55; padding:5px 0; text-align:center; cursor:pointer; transition:color .25s; }
+.ipod-lyrics-stream .lyric-line.active { color:#fff; font-size:15.5px; font-weight:800; text-shadow:0 0 14px rgba(168,85,247,0.65); }
+.ipod-lyrics-stream .lyrics-plain { color:rgba(255,255,255,0.75); font-size:13px; text-align:center; padding:10px; white-space:pre-wrap; }
+.ipod-lyrics-hint { color:rgba(255,255,255,0.4); font-size:10px; text-align:center; padding:8px 0 12px; letter-spacing:0.06em; }
+.ipod-art-wrapper { position:relative; }
+
+/* ---------------- Universal 3-dot song menu button ---------------- */
+.song-menu-btn { background:none; border:none; color:rgba(255,255,255,0.55); padding:8px; cursor:pointer; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:background .15s, color .15s; }
+.song-menu-btn:hover, .song-menu-btn:active { background:rgba(255,255,255,0.1); color:#fff; }
+.mobile-search-item .song-menu-btn { padding:6px; }
+.recent-menu-btn { position:absolute; top:6px; right:6px; background:rgba(10,8,16,0.55); backdrop-filter:blur(6px); padding:5px; }
+.mobile-v2-pick-card { position:relative; }
+.track-row .track-row-menu { background:none; border:none; color:rgba(255,255,255,0.5); font-size:18px; cursor:pointer; padding:4px 10px; }
