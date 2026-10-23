@@ -23,8 +23,6 @@ public class PlaybackKeeperPlugin extends Plugin {
 
     private static PlaybackKeeperPlugin instance;
 
-    /** True while the WebView renderer is down; JS events are suppressed. */
-    private static volatile boolean rendererDown = false;
 
     /**
      * Backlog of raw native events. Capacitor 6.2's triggerWindowJSEvent can
@@ -37,7 +35,7 @@ public class PlaybackKeeperPlugin extends Plugin {
 
     /** Called by MainActivity when the renderer dies / comes back. */
     public static void setRendererDown(boolean down) {
-        rendererDown = down;
+        RendererBridge.setRendererDown(down);
     }
 
     public PlaybackKeeperPlugin() {
@@ -54,7 +52,7 @@ public class PlaybackKeeperPlugin extends Plugin {
         // Poking a dead renderer with evaluateJavascript can crash the whole
         // process (which would also stop the music). Drop events until the
         // fresh WebView is up; it re-syncs via the "restored" flow.
-        if (rendererDown) return;
+        if (RendererBridge.isRendererDown()) return;
         PlaybackKeeperPlugin plugin = instance;
         if (plugin == null || plugin.bridge == null) return;
         try {
@@ -199,6 +197,61 @@ public class PlaybackKeeperPlugin extends Plugin {
         }, "simpmusic-playlist").start();
     }
 
+    /**
+     * v3.20.4: the current week's official YouTube Music chart playlists.
+     * Resolves with { charts: "<json array of {title,listId,thumb}>" }.
+     * The WebView uses it to build the Trending Playlists row from LIVE ids
+     * instead of ids baked into the app (which go stale every week).
+     */
+    @PluginMethod
+    public void charts(final PluginCall call) {
+        new Thread(() -> {
+            try {
+                String json = StreamResolver.fetchChartPlaylists();
+                JSObject ret = new JSObject();
+                ret.put("charts", json);
+                call.resolve(ret);
+            } catch (Exception e) {
+                call.reject("charts failed: " + e.getMessage());
+            }
+        }, "simpmusic-charts").start();
+    }
+
+    /**
+     * v3.21: artist page — top songs + albums for a name.
+     * Resolves with { artist: "<json>" }.
+     */
+    @PluginMethod
+    public void artist(final PluginCall call) {
+        final String name = call.getString("name", "");
+        new Thread(() -> {
+            try {
+                String json = StreamResolver.fetchArtist(name);
+                JSObject ret = new JSObject();
+                ret.put("artist", json);
+                call.resolve(ret);
+            } catch (Exception e) {
+                call.reject("artist failed: " + e.getMessage());
+            }
+        }, "simpmusic-artist").start();
+    }
+
+    /** v3.21: album/EP tracks. Resolves with { album: "<json>" }. */
+    @PluginMethod
+    public void album(final PluginCall call) {
+        final String id = call.getString("id", "");
+        new Thread(() -> {
+            try {
+                String json = StreamResolver.fetchAlbum(id);
+                JSObject ret = new JSObject();
+                ret.put("album", json);
+                call.resolve(ret);
+            } catch (Exception e) {
+                call.reject("album failed: " + e.getMessage());
+            }
+        }, "simpmusic-album").start();
+    }
+
     /** Asks the service to publish its current state via a "restored" event. */
     @PluginMethod
     public void status(PluginCall call) {
@@ -313,12 +366,24 @@ public class PlaybackKeeperPlugin extends Plugin {
     @PluginMethod
     public void setAudioQuality(PluginCall call) {
         try {
-            String q = call.getString("quality", "standard");
-            if (!"low".equals(q) && !"high".equals(q)) q = "standard";
+            // v3.20.6: accept every value the Settings card sends
+            // (saver | standard | high) — "saver" used to be rewritten to
+            // "standard", which made the Saver button do nothing.
+            String q = StreamResolver.normalizeQuality(call.getString("quality", "standard"));
             android.content.SharedPreferences prefs =
                 getContext().getSharedPreferences("simpmusic_prefs", Context.MODE_PRIVATE);
             prefs.edit().putString("audio_quality", q).apply();
-            StreamResolver.setQuality(q);
+            boolean changed = StreamResolver.setQuality(q);
+            // v3.20.6: apply it to the song playing RIGHT NOW — the service
+            // re-resolves it at the new band and resumes at the same position
+            // (previously only the next track changed, which made the setting
+            // look broken). Only when it really changed, so the WebView's
+            // restore-time push never re-buffers the current song.
+            if (changed) {
+                try {
+                    startService(baseIntent(PlaybackKeepAliveService.ACTION_RELOAD_QUALITY));
+                } catch (Exception ignored) {}
+            }
             call.resolve();
         } catch (Exception ex) {
             call.reject("setAudioQuality failed: " + ex.getMessage());

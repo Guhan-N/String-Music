@@ -3,13 +3,57 @@ apply plugin: 'com.android.application'
 android {
     namespace "com.simpmusic.app"
     compileSdk rootProject.ext.compileSdkVersion
+
     defaultConfig {
-        applicationId "com.simpmusic.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 91
-        versionName "3.20.2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    /**
+     * Two products, one codebase.
+     *
+     *   simple : String Music Simple — local files only, published on Google Play.
+     *            No INTERNET permission, no NewPipe/OkHttp dependency, no streaming code.
+     *   elite  : String Music Elite  — the full streaming app, distributed only as an
+     *            APK on GitHub Releases (never on Play).
+     *
+     * The package names are permanent: they can never be swapped or reused, because
+     * Play treats a package name as the app's permanent identity.
+     */
+    flavorDimensions "edition"
+    productFlavors {
+        simple {
+            dimension "edition"
+            applicationId "com.stringmusic.simple"
+            versionCode 1
+            versionName "1.0.0"
+            resValue "string", "app_name", "String Music Simple"
+            resValue "string", "title_activity_main", "String Music Simple"
+            resValue "string", "package_name", "com.stringmusic.simple"
+            resValue "string", "custom_url_scheme", "com.stringmusic.simple"
+            buildConfigField "boolean", "ELITE", "false"
+            buildConfigField "boolean", "STORE_BUILD", "false"
+        }
+        elite {
+            dimension "edition"
+            applicationId "com.stringmusic.elite"
+            versionCode 101
+            versionName "3.22.0"
+            resValue "string", "app_name", "String Music Elite"
+            resValue "string", "title_activity_main", "String Music Elite"
+            resValue "string", "package_name", "com.stringmusic.elite"
+            resValue "string", "custom_url_scheme", "com.stringmusic.elite"
+            buildConfigField "boolean", "ELITE", "true"
+            buildConfigField "boolean", "STORE_BUILD", "false"
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    defaultConfig {
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
@@ -45,14 +89,17 @@ dependencies {
     implementation "androidx.media3:media3-datasource:1.3.1"
     implementation "androidx.media3:media3-extractor:1.3.1"
     implementation "androidx.media3:media3-common:1.3.1"
-    implementation 'com.github.TeamNewPipe:NewPipeExtractor:v0.26.5'
-    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
+
+    // Streaming stack — compiled into the Elite APK only. The Simple flavor
+    // never links NewPipe/OkHttp, so the Play binary contains no extractor.
+    eliteImplementation 'com.github.TeamNewPipe:NewPipeExtractor:v0.26.5'
+    eliteImplementation 'com.squareup.okhttp3:okhttp:4.12.0'
 }
 
 apply from: 'capacitor.build.gradle'

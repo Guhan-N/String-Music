@@ -6,7 +6,9 @@
     "start": "node backend/server.js",
     "dev": "node --watch backend/server.js",
     "backend": "cd backend && npm start",
-    "mobile:build": "cd mobile/android && .\\gradlew.bat assembleDebug --parallel --build-cache --daemon",
-    "mobile:run": "cd mobile/android && .\\gradlew.bat installDebug --parallel --build-cache --daemon"
+    "mobile:build": "node tools/build-apps.mjs both",
+    "mobile:simple": "node tools/build-apps.mjs simple",
+    "mobile:elite": "node tools/build-apps.mjs elite",
+    "mobile:run": "cd mobile/android && .\\gradlew.bat installSimpleDebug --parallel --build-cache --daemon"
   }
 }

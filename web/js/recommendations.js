@@ -992,16 +992,55 @@
   function setupOfflineBanner() {
     var banner = document.getElementById('offlineBanner');
     if (!banner) return;
+    // v3.20.7: this used to repaint ONLY on the `online` / `offline` window
+    // events. Android's WebView is frozen in the background — exactly when
+    // connectivity usually changes — so the `online` event was missed, nothing
+    // re-ran, and the warning stayed on screen forever even though the network
+    // (and native playback) were fine again. SimpMusicNet owns the verdict now:
+    // it probes for real and re-checks on a timer, on foreground and on every
+    // network-change signal, so the banner always clears by itself. If the
+    // helper is missing (a stale cached bundle) we keep the old listeners and
+    // add a poll, which fixes the stuck banner there too.
     function offline() {
-      return (navigator.connection && navigator.connection.type === 'none')
-        || navigator.onLine === false;
+      var net = window.SimpMusicNet;
+      if (net && typeof net.isOffline === 'function') return net.isOffline();
+      // Degraded path only (net.js not loaded yet). `navigator.connection.type`
+      // is a deprecated API that could sit at 'none' long after the network was
+      // back — that alone used to pin this banner — so it is no longer trusted
+      // here; the probe below corrects onLine in both directions.
+      return navigator.onLine === false;
     }
     function render() {
       banner.style.display = offline() ? 'flex' : 'none';
     }
-    window.addEventListener('online', render);
-    window.addEventListener('offline', render);
+    var net = window.SimpMusicNet;
+    if (net && typeof net.onChange === 'function') {
+      net.onChange(render);
+    } else {
+      window.addEventListener('online', render);
+      window.addEventListener('offline', render);
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) render();
+      });
+      // While the warning is up, confirm it with a real request: a missed
+      // `online` event (or a stale navigator.onLine) must not be able to pin
+      // the banner on screen.
+      setInterval(function () {
+        if (banner.style.display !== 'flex') return;
+        var ctl = typeof AbortController === 'function' ? new AbortController() : null;
+        var killer = ctl ? setTimeout(function () { ctl.abort(); }, 6000) : null;
+        fetch('https://i.ytimg.com/vi/dQw4w9WgXcQ/default.jpg?t=' + Date.now(), {
+          mode: 'no-cors', cache: 'no-store', signal: ctl ? ctl.signal : undefined
+        }).then(function () {
+          if (killer) clearTimeout(killer);
+          banner.style.display = 'none';
+        }, function () {
+          if (killer) clearTimeout(killer);
+        });
+      }, 5000);
+    }
     render();
+    if (net && typeof net.verify === 'function') net.verify();
 
     // Auto-relink legacy downloads once per install: resolve their videoIds
     // via native search while online and store them in the id map.

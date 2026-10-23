@@ -53,30 +53,110 @@ public final class StreamResolver {
     private static final Object INIT_LOCK = new Object();
     private static boolean initialized = false;
 
-    /** videoId → resolved stream URL. */
+    /** cacheKey → resolved stream URL. */
     private static final Map<String, String> CACHE = new LinkedHashMap<>();
+    /** cacheKey → System.currentTimeMillis() when it was resolved. */
+    private static final Map<String, Long> CACHE_AT = new LinkedHashMap<>();
     private static final int CACHE_MAX = 24;
+
+    /**
+     * v3.20.7: playback URLs are cached under {@code videoId@quality} and
+     * downloads under {@code dl:videoId}. The keys MUST be built in one place:
+     * invalidate() and isCached() used to look up the bare videoId, so every
+     * "drop the dead URL" call was a silent no-op. A stream URL that had expired
+     * stayed in the map, resolution kept handing back the same dead URL, the
+     * retry failed too — and the track was dropped and skipped. Restarting the
+     * app (which clears this map) made the very same song play again, which is
+     * exactly the "some songs won't play until I restart" report.
+     */
+    private static String playbackKey(String videoId) {
+        return videoId + "@" + quality;
+    }
+
+    /** Fallback lifetime for a URL that does not advertise its own expiry. */
+    private static final long CACHE_MAX_AGE_MS = 3 * 60 * 60 * 1000L;
+    /** Re-resolve this long before the URL's own `expire` timestamp. */
+    private static final long EXPIRY_MARGIN_MS = 60 * 1000L;
+
+    /** Epoch ms when this URL dies, parsed from its own {@code expire=} param (0 = unknown). */
+    private static long urlExpiryMs(String url) {
+        try {
+            java.util.regex.Matcher m = java.util.regex.Pattern
+                    .compile("[?&]expire=(\\d{9,})").matcher(url);
+            if (m.find()) return Long.parseLong(m.group(1)) * 1000L;
+        } catch (Exception ignored) { }
+        return 0L;
+    }
+
+    /** True when the cached entry may no longer be used. Caller holds the lock. */
+    private static boolean isStale(String key, String url) {
+        Long at = CACHE_AT.get(key);
+        long now = System.currentTimeMillis();
+        if (at == null) return true;
+        long exp = urlExpiryMs(url);
+        if (exp > 0) return now + EXPIRY_MARGIN_MS >= exp;
+        return now - at >= CACHE_MAX_AGE_MS;
+    }
+
+    /** Puts a URL in the cache with its resolve time. Caller holds the lock. */
+    private static void cachePut(String key, String url) {
+        CACHE.put(key, url);
+        CACHE_AT.put(key, System.currentTimeMillis());
+    }
+
+    /** Drops the oldest entry (insertion order) plus its bookkeeping. */
+    private static void evictOldest() {
+        java.util.Iterator<String> it = CACHE.keySet().iterator();
+        if (!it.hasNext()) return;
+        String oldest = it.next();
+        it.remove();
+        CACHE_AT.remove(oldest);
+        // Only drop the bitrate badge that belongs to the evicted entry, and
+        // only when it is there: this used to assume BITRATES always had an
+        // entry, and threw NoSuchElementException inside the resolve call when
+        // it did not (dl: entries and repeat resolves at another quality).
+        String id = oldest.startsWith("dl:") ? oldest.substring(3)
+                : oldest.substring(0, Math.max(0, oldest.indexOf('@')));
+        BITRATES.remove(id);
+    }
 
     /** v3.12.4: videoId → chosen average bitrate (kbps) for the UI badge. */
     private static final Map<String, Integer> BITRATES = new LinkedHashMap<>();
 
     /**
-     * v3.12.2: user-selected audio quality ("low" | "standard" | "high").
+     * v3.12.2: user-selected audio quality ("saver" | "standard" | "high").
      * Changing it invalidates the cache so the next resolve re-picks streams.
      */
     private static volatile String quality = "standard";
 
     private StreamResolver() {}
 
-    public static void setQuality(String q) {
-        String nq = (q == null) ? "standard" : q;
-        if ("low".equals(nq) || "high".equals(nq)) nq = nq;
-        else nq = "standard";
+    /**
+     * v3.20.6: the Settings card offers saver | standard | high, but only
+     * "low"/"high" used to survive normalization — tapping Saver silently
+     * became Standard, so two of the three buttons did exactly the same thing.
+     * "low" stays accepted as the legacy spelling of "saver".
+     */
+    public static String normalizeQuality(String q) {
+        if (q == null) return "standard";
+        String v = q.trim().toLowerCase(java.util.Locale.ROOT);
+        if (v.equals("saver") || v.equals("low") || v.equals("data")
+                || v.equals("datasaver") || v.equals("data_saver")) return "saver";
+        if (v.equals("high") || v.equals("highres") || v.equals("high_res")
+                || v.equals("best") || v.equals("highest")) return "high";
+        return "standard";
+    }
+
+    /** Returns true when the value actually changed (cache was cleared). */
+    public static boolean setQuality(String q) {
+        String nq = normalizeQuality(q);
         if (!nq.equals(quality)) {
             quality = nq;
-            synchronized (CACHE) { CACHE.clear(); }
+            synchronized (CACHE) { CACHE.clear(); CACHE_AT.clear(); }
             Log.d(TAG, "Audio quality set to " + nq + " (cache cleared)");
+            return true;
         }
+        return false;
     }
 
     public static String getQuality() { return quality; }
@@ -101,10 +181,13 @@ public final class StreamResolver {
         if (videoId == null || videoId.isEmpty()) {
             throw new IOException("Empty video id");
         }
-        String cacheKey = videoId + "@" + quality;
+        String cacheKey = playbackKey(videoId);
         synchronized (CACHE) {
             String cached = CACHE.get(cacheKey);
-            if (cached != null) return cached;
+            // v3.20.7: never hand out a URL that already expired (or waited too
+            // long) — that is what turned into a 403 and a skipped song.
+            if (cached != null && !isStale(cacheKey, cached)) return cached;
+            if (cached != null) CACHE.remove(cacheKey);
         }
 
         ensureInitialized();
@@ -124,14 +207,8 @@ public final class StreamResolver {
             if (best == null) throw new IOException("No usable audio stream found");
 
             synchronized (CACHE) {
-                if (CACHE.size() >= CACHE_MAX) {
-                    // Drop the oldest entry (insertion order)
-                    String oldest = CACHE.keySet().iterator().next();
-                    CACHE.remove(oldest);
-                    String oldestBr = BITRATES.keySet().iterator().next();
-                    BITRATES.remove(oldestBr);
-                }
-                CACHE.put(cacheKey, best.getUrl());
+                if (CACHE.size() >= CACHE_MAX) evictOldest();
+                cachePut(cacheKey, best.getUrl());
                 BITRATES.put(videoId, best.getAverageBitrate());
             }
             Log.d(TAG, "Resolved " + videoId + " (" + streams.size()
@@ -162,7 +239,8 @@ public final class StreamResolver {
         String cacheKey = "dl:" + videoId;
         synchronized (CACHE) {
             String cached = CACHE.get(cacheKey);
-            if (cached != null) return cached;
+            if (cached != null && !isStale(cacheKey, cached)) return cached;
+            if (cached != null) CACHE.remove(cacheKey);
         }
 
         ensureInitialized();
@@ -178,14 +256,10 @@ public final class StreamResolver {
             }
             String best = pickDownloadAudio(streams, preferHigh);
             if (best == null) throw new IOException("No usable audio stream found");
-            if (best == null) throw new IOException("No usable audio stream found");
 
             synchronized (CACHE) {
-                if (CACHE.size() >= CACHE_MAX) {
-                    String oldest = CACHE.keySet().iterator().next();
-                    CACHE.remove(oldest);
-                }
-                CACHE.put(cacheKey, best);
+                if (CACHE.size() >= CACHE_MAX) evictOldest();
+                cachePut(cacheKey, best);
             }
             Log.d(TAG, "Resolved download stream for " + videoId);
             return best;
@@ -227,18 +301,40 @@ public final class StreamResolver {
         return bestUrl;
     }
 
-    /** Clears cached URLs (e.g. when extraction errors suggest stale URLs). */
+    /**
+     * Clears every cached URL for this video id — all qualities plus the
+     * download entry — so the next resolve extracts a fresh one.
+     *
+     * v3.20.7: this used to remove the key {@code videoId}, which was never
+     * stored (entries are {@code videoId@quality} / {@code dl:videoId}), so it
+     * silently did NOTHING. That defeated both callers: the 403 self-healing
+     * data source re-resolved and got the same dead URL back, and the player's
+     * post-error retry did the same — the song could not play again for the rest
+     * of the session, yet worked after restarting the app.
+     */
     public static void invalidate(String videoId) {
+        if (videoId == null || videoId.isEmpty()) return;
+        String prefix = videoId + "@";
+        String dlKey = "dl:" + videoId;
         synchronized (CACHE) {
-            CACHE.remove(videoId);
+            java.util.Iterator<String> it = CACHE.keySet().iterator();
+            while (it.hasNext()) {
+                String k = it.next();
+                if (k.startsWith(prefix) || k.equals(dlKey)) {
+                    it.remove();
+                    CACHE_AT.remove(k);
+                }
+            }
         }
     }
 
-    /** True when a stream URL for this video id is already cached. */
+    /** True when a usable (non-stale) stream URL for this video id is cached. */
     public static boolean isCached(String videoId) {
         if (videoId == null || videoId.isEmpty()) return false;
         synchronized (CACHE) {
-            return CACHE.containsKey(videoId);
+            String key = playbackKey(videoId);
+            String url = CACHE.get(key);
+            return url != null && !isStale(key, url);
         }
     }
 
@@ -344,6 +440,131 @@ public final class StreamResolver {
         }
         // v3.17.1 FALLBACK: NewPipe extractor (upstream may fix the scrape).
         return resolvePlaylistNewPipe(listId);
+    }
+
+    /**
+     * v3.20.4: the CURRENT week's official chart playlists.
+     *
+     * YouTube Music rotates the chart playlist ids ("Top Weekly Videos Tamil",
+     * "Top 100 Music Videos India", …) every week, so any list id baked into
+     * the app goes stale immediately. This reads the charts landing page
+     * (browseId FEmusic_charts) and returns the live ids.
+     *
+     * Returns JSON: [{title, listId, thumb}, …] — public playlists only
+     * (albums and artist channels are skipped).
+     */
+    public static String fetchChartPlaylists() throws IOException {
+        ensureInitialized();
+        OkHttpClient client = new OkHttpClient.Builder()
+                .connectTimeout(12, TimeUnit.SECONDS)
+                .readTimeout(20, TimeUnit.SECONDS)
+                .build();
+        // Built as a raw JSON string: org.json's chainable put() declares a
+        // checked JSONException, and this payload is static anyway.
+        String payloadJson = "{\"browseId\":\"FEmusic_charts\",\"context\":{\"client\":{"
+                + "\"clientName\":\"WEB_REMIX\",\"clientVersion\":\"1.20240101.01.00\","
+                + "\"hl\":\"en\",\"gl\":\"IN\"}}}";
+        okhttp3.Request req = new okhttp3.Request.Builder()
+                .url("https://music.youtube.com/youtubei/v1/browse?key="
+                        + "AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30" + "&prettyPrint=false")
+                .header("Content-Type", "application/json")
+                .header("User-Agent", USER_AGENT)
+                .header("Accept-Language", "en-US,en;q=0.9")
+                .header("Cookie", "CONSENT=YES+cb.20240101-01-p0.en+FX+700; SOCS=CAI")
+                .header("Origin", "https://music.youtube.com")
+                .post(RequestBody.create(null,
+                        payloadJson.getBytes(java.nio.charset.StandardCharsets.UTF_8)))
+                .build();
+        okhttp3.Response resp = client.newCall(req).execute();
+        String body = resp.body() != null ? resp.body().string() : "";
+        if (resp.code() != 200) throw new IOException("HTTP " + resp.code());
+        org.json.JSONObject root;
+        try {
+            root = new org.json.JSONObject(body);
+        } catch (Exception e) {
+            throw new IOException("charts response not JSON: " + e.getMessage(), e);
+        }
+
+        java.util.List<String[]> rows = new java.util.ArrayList<>();
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        collectChartRows(root, rows, seen);
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < rows.size(); i++) {
+            String[] r = rows.get(i);
+            if (i > 0) sb.append(',');
+            sb.append("{\"title\":\"").append(jsEscape(r[0]))
+              .append("\",\"listId\":\"").append(jsEscape(r[1]))
+              .append("\",\"thumb\":\"").append(jsEscape(r[2])).append("\"}");
+        }
+        return sb.append(']').toString();
+    }
+
+    /**
+     * Walks the charts response for playlist rows (browseId "VLPL…"), keeping
+     * the title, the bare list id and the best thumbnail. Albums ("VLOLAK…")
+     * and artist channels ("UC…") are ignored — they are not charts.
+     */
+    private static void collectChartRows(Object node, java.util.List<String[]> out,
+                                         java.util.Set<String> seen) {
+        if (node == null) return;
+        if (node instanceof org.json.JSONArray) {
+            org.json.JSONArray arr = (org.json.JSONArray) node;
+            for (int i = 0; i < arr.length(); i++) collectChartRows(arr.opt(i), out, seen);
+            return;
+        }
+        if (!(node instanceof org.json.JSONObject)) return;
+        org.json.JSONObject o = (org.json.JSONObject) node;
+
+        org.json.JSONObject two = o.optJSONObject("musicTwoRowItemRenderer");
+        org.json.JSONObject list = o.optJSONObject("musicResponsiveListItemRenderer");
+        String browseId = null;
+        String title = "";
+        String thumb = "";
+        if (two != null) {
+            browseId = pathBrowseId(two.optJSONObject("navigationEndpoint"));
+            title = runsText(two.optJSONObject("title"));
+            org.json.JSONObject tr = two.optJSONObject("thumbnailRenderer");
+            org.json.JSONObject mt = tr == null ? null : tr.optJSONObject("musicThumbnailRenderer");
+            org.json.JSONObject th = mt == null ? null : mt.optJSONObject("thumbnail");
+            thumb = bestThumb(th == null ? null : th.optJSONArray("thumbnails"));
+        } else if (list != null) {
+            browseId = pathBrowseId(list.optJSONObject("navigationEndpoint"));
+            org.json.JSONArray cols = list.optJSONArray("flexColumns");
+            if (cols != null && cols.length() > 0) {
+                org.json.JSONObject c0 = cols.optJSONObject(0);
+                org.json.JSONObject txt = c0 == null ? null : c0.optJSONObject("musicResponsiveListItemFlexColumnRenderer");
+                title = runsText(txt == null ? null : txt.optJSONObject("text"));
+            }
+        }
+
+        if (browseId != null && browseId.startsWith("VLPL") && title != null && !title.isEmpty()) {
+            String listId = browseId.substring(2);
+            if (seen.add(listId)) out.add(new String[]{title, listId, thumb});
+        }
+
+        java.util.Iterator<String> keys = o.keys();
+        while (keys.hasNext()) collectChartRows(o.opt(keys.next()), out, seen);
+    }
+
+    private static String pathBrowseId(org.json.JSONObject endpoint) {
+        if (endpoint == null) return null;
+        org.json.JSONObject browse = endpoint.optJSONObject("browseEndpoint");
+        return browse == null ? null : browse.optString("browseId", null);
+    }
+
+    /** Largest thumbnail URL in an InnerTube thumbnails array. */
+    private static String bestThumb(org.json.JSONArray thumbs) {
+        if (thumbs == null || thumbs.length() == 0) return "";
+        String url = "";
+        int bestW = -1;
+        for (int i = 0; i < thumbs.length(); i++) {
+            org.json.JSONObject t = thumbs.optJSONObject(i);
+            if (t == null) continue;
+            int w = t.optInt("width", 0);
+            String u = t.optString("url", "");
+            if (u != null && !u.isEmpty() && w >= bestW) { bestW = w; url = u; }
+        }
+        return url;
     }
 
     /** InnerTube (YouTube Music web client) playlist fetch — JSON in/out. */
@@ -692,10 +913,11 @@ public final class StreamResolver {
      */
     private static AudioStream pickBestAudio(List<AudioStream> streams, boolean preferHigh, String quality) {
         // v3.12.4: the user's setting must produce a DIFFERENT stream:
-        //   low      → the LOWEST bitrate stream (data saver)
+        //   saver    → the LOWEST bitrate stream (data saver)
         //   standard → closest to ~128 kbps
         //   high     → the HIGHEST bitrate stream available
-        String q = quality != null ? quality : "standard";
+        // v3.20.6: "saver" is the name the UI sends; "low" is the legacy alias.
+        String q = normalizeQuality(quality);
         if (preferHigh) q = "high"; // downloads keep their aggressive path
 
         AudioStream best = null;
@@ -707,6 +929,7 @@ public final class StreamResolver {
             int bitrate = s.getAverageBitrate();
             int score;
             switch (q) {
+                case "saver":
                 case "low":
                     score = -bitrate;                       // smallest wins
                     break;
@@ -735,6 +958,288 @@ public final class StreamResolver {
             initialized = true;
             Log.d(TAG, "NewPipe initialized");
         }
+    }
+
+    /** JSONObject.put declares a checked JSONException — swallow it here. */
+    private static void put(org.json.JSONObject obj, String key, Object value) {
+        try { obj.put(key, value); } catch (Exception ignored) { }
+    }
+
+    /** JSONArray.put never throws in this API level, but keep it symmetrical. */
+    private static void put(org.json.JSONArray arr, Object value) {
+        arr.put(value);
+    }
+
+    // ---------------- v3.21: artist & album pages ----------------
+
+    /** InnerTube client block shared by the artist/album browse calls. */
+    private static final String TUBE_CONTEXT =
+            "\"context\":{\"client\":{\"clientName\":\"WEB_REMIX\","
+                    + "\"clientVersion\":\"1.20240101.01.00\",\"hl\":\"en\",\"gl\":\"IN\"}}";
+
+    /** POSTs a JSON body to a music.youtube.com InnerTube endpoint. */
+    private static org.json.JSONObject innerTube(String endpoint, String payloadJson) throws IOException {
+        OkHttpClient client = new OkHttpClient.Builder()
+                .connectTimeout(12, TimeUnit.SECONDS)
+                .readTimeout(20, TimeUnit.SECONDS)
+                .build();
+        okhttp3.Request req = new okhttp3.Request.Builder()
+                .url("https://music.youtube.com/youtubei/v1/" + endpoint + "?key="
+                        + "AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30" + "&prettyPrint=false")
+                .header("Content-Type", "application/json")
+                .header("User-Agent", USER_AGENT)
+                .header("Accept-Language", "en-US,en;q=0.9")
+                .header("Cookie", "CONSENT=YES+cb.20240101-01-p0.en+FX+700; SOCS=CAI")
+                .header("Origin", "https://music.youtube.com")
+                .post(RequestBody.create(null,
+                        payloadJson.getBytes(java.nio.charset.StandardCharsets.UTF_8)))
+                .build();
+        okhttp3.Response resp = client.newCall(req).execute();
+        String body = resp.body() != null ? resp.body().string() : "";
+        if (resp.code() != 200) throw new IOException("HTTP " + resp.code());
+        try {
+            return new org.json.JSONObject(body);
+        } catch (Exception e) {
+            throw new IOException("response was not JSON", e);
+        }
+    }
+
+    /** Depth-first visitor over every object node of an InnerTube response. */
+    private interface JsonVisitor { void visit(org.json.JSONObject node); }
+
+    private static void walkJson(Object node, JsonVisitor visitor) {
+        if (node == null) return;
+        if (node instanceof org.json.JSONArray) {
+            org.json.JSONArray arr = (org.json.JSONArray) node;
+            for (int i = 0; i < arr.length(); i++) walkJson(arr.opt(i), visitor);
+            return;
+        }
+        if (!(node instanceof org.json.JSONObject)) return;
+        org.json.JSONObject obj = (org.json.JSONObject) node;
+        visitor.visit(obj);
+        java.util.Iterator<String> keys = obj.keys();
+        while (keys.hasNext()) walkJson(obj.opt(keys.next()), visitor);
+    }
+
+    /** Text of flexColumns[index] in a musicResponsiveListItemRenderer row. */
+    private static String flexText(org.json.JSONArray cols, int index) {
+        if (cols == null || index >= cols.length()) return "";
+        org.json.JSONObject col = cols.optJSONObject(index);
+        col = col == null ? null : col.optJSONObject("musicResponsiveListItemFlexColumnRenderer");
+        return runsText(col == null ? null : col.optJSONObject("text"));
+    }
+
+    /** "m:ss" duration held in the row's fixedColumns (0 when absent). */
+    private static long fixedDurationSec(org.json.JSONObject row) {
+        org.json.JSONArray fixed = row.optJSONArray("fixedColumns");
+        if (fixed == null) return 0;
+        for (int i = 0; i < fixed.length(); i++) {
+            org.json.JSONObject col = fixed.optJSONObject(i);
+            col = col == null ? null : col.optJSONObject("musicResponsiveListItemFixedColumnRenderer");
+            long sec = parseDuration(runsText(col == null ? null : col.optJSONObject("text")));
+            if (sec > 0) return sec;
+        }
+        return 0;
+    }
+
+    /**
+     * Track rows from an artist/album browse response (document order, de-duped).
+     * Both page types use musicResponsiveListItemRenderer rows with
+     * playlistItemData.videoId + flexColumns, so one collector serves both.
+     */
+    private static org.json.JSONArray collectShelfTracks(org.json.JSONObject root, int limit) {
+        final org.json.JSONArray out = new org.json.JSONArray();
+        final java.util.Set<String> seen = new java.util.HashSet<>();
+        walkJson(root, node -> {
+            if (out.length() >= limit) return;
+            org.json.JSONObject row = node.optJSONObject("musicResponsiveListItemRenderer");
+            if (row == null) return;
+            org.json.JSONObject itemData = row.optJSONObject("playlistItemData");
+            String videoId = itemData == null ? "" : itemData.optString("videoId", "");
+            if (videoId.isEmpty() || !seen.add(videoId)) return;
+            org.json.JSONArray cols = row.optJSONArray("flexColumns");
+            String title = flexText(cols, 0);
+            if (title.isEmpty()) return;
+            long dur = fixedDurationSec(row);
+            org.json.JSONObject track = new org.json.JSONObject();
+            put(track, "videoId", videoId);
+            put(track, "title", title);
+            put(track, "artist", flexText(cols, 1));
+            put(track, "album", "");
+            put(track, "duration", dur > 0 ? formatDuration(dur) : "3:30");
+            put(track, "durationSec", dur > 0 ? dur : 180);
+            // Artist "Top songs" rows carry no duration; say so instead of
+            // letting the UI present the 3:30 placeholder as a real length.
+            put(track, "durationKnown", dur > 0);
+            put(track, "thumbnail", "https://i.ytimg.com/vi/" + videoId + "/hqdefault.jpg");
+            put(out, track);
+        });
+        return out;
+    }
+
+    /** Album/single cards from the artist page's horizontal carousels. */
+    private static org.json.JSONArray collectShelfAlbums(org.json.JSONObject root, int limit) {
+        final org.json.JSONArray out = new org.json.JSONArray();
+        final java.util.Set<String> seen = new java.util.HashSet<>();
+        walkJson(root, node -> {
+            if (out.length() >= limit) return;
+            org.json.JSONObject shelf = node.optJSONObject("musicCarouselShelfRenderer");
+            if (shelf == null) return;
+            org.json.JSONObject header = shelf.optJSONObject("header");
+            header = header == null ? null : header.optJSONObject("musicCarouselShelfBasicHeaderRenderer");
+            String heading = runsText(header == null ? null : header.optJSONObject("title"));
+            String lower = heading.toLowerCase(java.util.Locale.ROOT);
+            if (!lower.contains("album") && !lower.contains("single")
+                    && !lower.contains("ep")) return;
+            org.json.JSONArray contents = shelf.optJSONArray("contents");
+            if (contents == null) return;
+            for (int i = 0; i < contents.length() && out.length() < limit; i++) {
+                org.json.JSONObject item = contents.optJSONObject(i);
+                item = item == null ? null : item.optJSONObject("musicTwoRowItemRenderer");
+                if (item == null) continue;
+                String albumId = pathBrowseId(item.optJSONObject("navigationEndpoint"));
+                if (albumId == null || !albumId.startsWith("MPRE")) continue;
+                if (!seen.add(albumId)) continue;
+                org.json.JSONObject thumbRenderer = item.optJSONObject("thumbnailRenderer");
+                thumbRenderer = thumbRenderer == null ? null
+                        : thumbRenderer.optJSONObject("musicThumbnailRenderer");
+                org.json.JSONObject thumb = thumbRenderer == null ? null
+                        : thumbRenderer.optJSONObject("thumbnail");
+                org.json.JSONObject album = new org.json.JSONObject();
+                put(album, "albumId", albumId);
+                put(album, "title", runsText(item.optJSONObject("title")));
+                put(album, "year", runsText(item.optJSONObject("subtitle")));
+                put(album, "thumbnail", bestThumb(thumb == null ? null
+                        : thumb.optJSONArray("thumbnails")));
+                put(out, album);
+            }
+        });
+        return out;
+    }
+
+    /**
+     * v3.21: artist page — header, top songs and albums/singles.
+     * Returns JSON {name, artistId, thumbnail, songs[], albums[]}.
+     */
+    public static String fetchArtist(String name) throws IOException {
+        if (name == null || name.trim().isEmpty()) throw new IOException("Empty artist name");
+        ensureInitialized();
+        String searchPayload = "{\"query\":\"" + jsEscape(name.trim())
+                + "\",\"params\":\"EgWKAQIgAWoKEAUQCRADEAQQCg%3D%3D\"," + TUBE_CONTEXT + "}";
+        org.json.JSONObject searchRoot = innerTube("search", searchPayload);
+
+        final String[] artistId = {""};
+        final String[] matchedName = {""};
+        walkJson(searchRoot, node -> {
+            if (!artistId[0].isEmpty()) return;
+            org.json.JSONObject row = node.optJSONObject("musicResponsiveListItemRenderer");
+            if (row == null) return;
+            String id = pathBrowseId(row.optJSONObject("navigationEndpoint"));
+            if (id == null || !id.startsWith("UC")) return;
+            artistId[0] = id;
+            matchedName[0] = flexText(row.optJSONArray("flexColumns"), 0);
+        });
+        if (artistId[0].isEmpty()) throw new IOException("No artist found for " + name);
+
+        org.json.JSONObject root = innerTube("browse",
+                "{\"browseId\":\"" + jsEscape(artistId[0]) + "\"," + TUBE_CONTEXT + "}");
+
+        final String[] headerName = {matchedName[0].isEmpty() ? name.trim() : matchedName[0]};
+        final String[] thumbnail = {""};
+        final boolean[] headerSeen = {false};
+        walkJson(root, node -> {
+            if (headerSeen[0]) return;
+            org.json.JSONObject header = node.optJSONObject("musicImmersiveHeaderRenderer");
+            if (header == null) return;
+            headerSeen[0] = true;
+            String title = runsText(header.optJSONObject("title"));
+            if (!title.isEmpty()) headerName[0] = title;
+            org.json.JSONObject tr = header.optJSONObject("thumbnail");
+            tr = tr == null ? null : tr.optJSONObject("musicThumbnailRenderer");
+            org.json.JSONObject th = tr == null ? null : tr.optJSONObject("thumbnail");
+            String url = bestThumb(th == null ? null : th.optJSONArray("thumbnails"));
+            if (!url.isEmpty()) thumbnail[0] = url;
+        });
+
+        org.json.JSONArray songs = collectShelfTracks(root, 25);
+        org.json.JSONArray albums = collectShelfAlbums(root, 12);
+        if (thumbnail[0].isEmpty() && songs.length() > 0) {
+            thumbnail[0] = songs.optJSONObject(0).optString("thumbnail", "");
+        }
+
+        org.json.JSONObject out = new org.json.JSONObject();
+        put(out, "name", headerName[0]);
+        put(out, "artistId", artistId[0]);
+        put(out, "thumbnail", thumbnail[0]);
+        put(out, "songs", songs);
+        put(out, "albums", albums);
+        Log.d(TAG, "Artist '" + headerName[0] + "' → " + songs.length()
+                + " songs, " + albums.length() + " albums");
+        return out.toString();
+    }
+
+    /**
+     * v3.21: album/EP track list. Returns JSON
+     * {albumId, name, artist, year, thumbnail, tracks[]}.
+     */
+    public static String fetchAlbum(String albumId) throws IOException {
+        if (albumId == null || !albumId.startsWith("MPRE"))
+            throw new IOException("Not an album id");
+        ensureInitialized();
+        org.json.JSONObject root = innerTube("browse",
+                "{\"browseId\":\"" + jsEscape(albumId) + "\"," + TUBE_CONTEXT + "}");
+
+        final String[] name = {""};
+        final String[] year = {""};
+        final String[] artist = {""};
+        final String[] thumbnail = {""};
+        final boolean[] headerSeen = {false};
+        walkJson(root, node -> {
+            if (headerSeen[0]) return;
+            org.json.JSONObject header = node.optJSONObject("musicResponsiveHeaderRenderer");
+            if (header == null) header = node.optJSONObject("musicDetailHeaderRenderer");
+            if (header == null) return;
+            headerSeen[0] = true;
+            name[0] = runsText(header.optJSONObject("title"));
+            org.json.JSONObject subtitle = header.optJSONObject("subtitle");
+            String subText = runsText(subtitle);
+            java.util.regex.Matcher m = java.util.regex.Pattern
+                    .compile("(19|20)\\d{2}").matcher(subText);
+            if (m.find()) year[0] = m.group();
+            org.json.JSONObject strapline = header.optJSONObject("straplineTextOne");
+            org.json.JSONArray runs = strapline == null ? null : strapline.optJSONArray("runs");
+            if (runs != null) {
+                for (int i = 0; i < runs.length(); i++) {
+                    org.json.JSONObject run = runs.optJSONObject(i);
+                    String text = run == null ? "" : run.optString("text", "");
+                    if (!text.isEmpty()) { artist[0] = text; break; }
+                }
+            }
+            org.json.JSONObject tr = header.optJSONObject("thumbnail");
+            tr = tr == null ? null : tr.optJSONObject("musicThumbnailRenderer");
+            org.json.JSONObject th = tr == null ? null : tr.optJSONObject("thumbnail");
+            thumbnail[0] = bestThumb(th == null ? null : th.optJSONArray("thumbnails"));
+        });
+
+        org.json.JSONArray tracks = collectShelfTracks(root, 60);
+        if (name[0].isEmpty()) name[0] = "Album";
+        for (int i = 0; i < tracks.length(); i++) {
+            org.json.JSONObject t = tracks.optJSONObject(i);
+            if (t != null) put(t, "album", name[0]);
+        }
+        if (thumbnail[0].isEmpty() && tracks.length() > 0) {
+            thumbnail[0] = tracks.optJSONObject(0).optString("thumbnail", "");
+        }
+
+        org.json.JSONObject out = new org.json.JSONObject();
+        put(out, "albumId", albumId);
+        put(out, "name", name[0]);
+        put(out, "artist", artist[0]);
+        put(out, "year", year[0]);
+        put(out, "thumbnail", thumbnail[0]);
+        put(out, "tracks", tracks);
+        Log.d(TAG, "Album '" + name[0] + "' → " + tracks.length() + " tracks");
+        return out.toString();
     }
 
     private static final String YT_URL_BASE = "https://www.youtube.com/watch?v=";

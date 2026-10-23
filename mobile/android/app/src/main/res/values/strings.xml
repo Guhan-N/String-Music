@@ -1,7 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">String Music</string>
-    <string name="title_activity_main">String Music</string>
-    <string name="package_name">com.simpmusic.app</string>
-    <string name="custom_url_scheme">com.simpmusic.app</string>
+    <!-- app_name / title_activity_main / package_name / custom_url_scheme are
+         generated per edition in app/build.gradle (flavor resValues). -->
 </resources>

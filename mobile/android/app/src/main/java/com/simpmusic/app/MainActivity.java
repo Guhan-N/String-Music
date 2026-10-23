@@ -31,6 +31,21 @@ import java.util.Locale;
 public class MainActivity extends BridgeActivity {
   private static final int REQ_POST_NOTIFICATIONS = 4001;
 
+  /** v3.20.2-store: true in the Play Store bundle — download feature absent. */
+  public static final boolean STORE_BUILD =
+      BuildConfig.STORE_BUILD;
+
+  /** Registers a plugin by class name; missing classes are ignored. */
+  @SuppressWarnings("unchecked")
+  private void registerReflectively(String className) {
+    try {
+      registerPlugin(
+          (Class<? extends com.getcapacitor.Plugin>) Class.forName(className));
+    } catch (Throwable ignored) {
+      // Not compiled into this edition (e.g. streaming plugins in Simple).
+    }
+  }
+
   /** Renderer reloads since the last successful page load. */
   private int rendererReloads = 0;
 
@@ -45,13 +60,22 @@ public class MainActivity extends BridgeActivity {
     // Must run BEFORE super.onCreate(): the Capacitor bridge and its plugin
     // registry are constructed inside super.onCreate(), so plugins registered
     // afterwards are silently dropped.
-    registerPlugin(PlaybackKeeperPlugin.class);
-    registerPlugin(DownloadPlugin.class);
-    registerPlugin(BackupPlugin.class);
+    // v4.0: plugins are registered reflectively so ONE MainActivity serves
+    // both editions. The Simple build compiles without any of these classes
+    // (src/elite/java) and simply skips them.
+    registerReflectively("com.simpmusic.app.PlaybackKeeperPlugin");
+    if (!STORE_BUILD) {
+      registerReflectively("com.simpmusic.app.DownloadPlugin");
+    }
+    registerReflectively("com.simpmusic.app.BackupPlugin");
+    registerReflectively("com.simpmusic.app.LocalLibraryPlugin");
+    registerReflectively("com.simpmusic.app.LocalPlayerPlugin");
     super.onCreate(savedInstanceState);
     installCrashLogger();
     requestNotificationPermissionIfNeeded();
-    requestBatteryOptimizationExemption();
+    // Elite streams continuously; Simple plays local files and must not ask
+    // for a battery-optimisation exemption (a Play policy sensitive prompt).
+    if (BuildConfig.ELITE) requestBatteryOptimizationExemption();
     installRendererRecovery();
     installSmartBack();
   }
@@ -151,7 +175,7 @@ public class MainActivity extends BridgeActivity {
           rendererReloads++;
           logCrash("WebViewRendererGone #" + rendererReloads,
               "didCrash=" + (detail != null && detail.didCrash()));
-          PlaybackKeeperPlugin.setRendererDown(true);
+          RendererBridge.setRendererDown(true);
           final long now = SystemClock.uptimeMillis();
           if (rendererReloads > MAX_RENDERER_RELOADS || now < nextRendererReloadAt) {
             // Too many deaths in a row: keep the process alive but stop the
@@ -173,7 +197,7 @@ public class MainActivity extends BridgeActivity {
         @Override
         public void onPageFinished(WebView view, String url) {
           super.onPageFinished(view, url);
-          PlaybackKeeperPlugin.setRendererDown(false); // fresh WebView is up
+          RendererBridge.setRendererDown(false); // fresh WebView is up
         }
       });
     } catch (Exception ignored) {

@@ -6,8 +6,24 @@ An ad-free music streaming ecosystem inspired by **SimpMusic** and **Apple Music
 - 🎧 **iPod Classic Player**: Tap the playing song profile picture / album art to launch the iPod Click Wheel player modal!
 - 📲 **Android Mobile APK**: Standalone installable `.apk` ([`SimpMusic.apk`](./SimpMusic.apk)) with background playback.
 - 🧩 **Browser Extension**: Manifest V3 extension with mini-player popup & background audio.
+- 🎤 **Artist & Album pages**: tap any artist name for their top songs and albums; open an album to play it. Data comes from YouTube Music's artist page via InnerTube (`/api/artist`, `/api/album` on the web, a native plugin call in the APK).
 
 Stream directly with **real-time synchronized lyrics** powered by the open [LRCLIB](https://lrclib.net) API, requiring **ZERO subscriptions, API keys, or backend IP configurations**.
+
+---
+
+## 📦 Two products, one codebase
+
+| | String Music **Simple** | String Music **Elite** |
+|---|---|---|
+| Package | `com.stringmusic.simple` | `com.stringmusic.elite` |
+| Ships on | Google Play | GitHub Releases (APK) |
+| Audio | local files only (no network permission at all) | YouTube streaming + local |
+| Build | `node tools/build-apps.mjs simple` | `node tools/build-apps.mjs elite` |
+
+`const ELITE_BUILD` in [`web/js/build-config.js`](./web/js/build-config.js) is the
+only switch. Full strategy, side-loading flow and release checklist:
+[`DISTRIBUTION.md`](./DISTRIBUTION.md).
 
 ---
 

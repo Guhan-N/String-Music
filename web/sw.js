@@ -3,12 +3,14 @@
  * Enables offline caching, background playback reliability, and 1-tap installation
  */
 
-const CACHE_NAME = 'simpmusic-v84';
+const CACHE_NAME = 'simpmusic-v92';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/css/style.css',
+  '/js/net.js',
   '/js/clientCatalog.js',
+  '/js/artist.js',
   '/js/player.js',
   '/js/lyrics.js',
   '/js/app.js',

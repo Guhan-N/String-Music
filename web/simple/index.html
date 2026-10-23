@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+  <meta name="theme-color" content="#0b0b0f">
+  <title>String Music</title>
+  <link rel="stylesheet" href="simple.css">
+</head>
+<body>
+  <div class="app">
+
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">♪</div>
+        <div class="brand-text">
+          <h1>String Music</h1>
+          <p id="libMeta">Reading your library…</p>
+        </div>
+      </div>
+      <button id="rescanBtn" class="icon-btn" type="button" aria-label="Rescan library">⟳</button>
+    </header>
+
+    <div class="search-wrap">
+      <input id="search" type="search" autocomplete="off" spellcheck="false"
+             placeholder="Search songs, artists, albums">
+    </div>
+
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-tab="songs" role="tab" type="button">Songs</button>
+      <button class="tab" data-tab="liked" role="tab" type="button">Liked</button>
+      <button class="tab" data-tab="settings" role="tab" type="button">Settings</button>
+    </nav>
+
+    <main class="main">
+
+      <section class="view" id="view-songs">
+        <ul class="list" id="songList"></ul>
+        <div class="empty" id="songsEmpty" hidden></div>
+      </section>
+
+      <section class="view" id="view-liked" hidden>
+        <ul class="list" id="likedList"></ul>
+        <div class="empty" id="likedEmpty" hidden>
+          <div class="empty-glyph">♥</div>
+          <h2>No liked songs yet</h2>
+          <p>Tap the heart on any track and it will show up here.</p>
+        </div>
+      </section>
+
+      <section class="view" id="view-settings" hidden>
+        <div class="card">
+          <div class="card-title">Library</div>
+          <div class="stat-row">
+            <div class="stat"><span id="statSongs">0</span><small>songs</small></div>
+            <div class="stat"><span id="statArtists">0</span><small>artists</small></div>
+            <div class="stat"><span id="statLiked">0</span><small>liked</small></div>
+          </div>
+          <p class="card-note">String Music only plays audio files already stored on this device.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Export sync code</div>
+          <p class="card-note">Copy this code to carry your liked songs and settings to another String Music install.</p>
+          <button class="btn" id="exportBtn" type="button">Export Sync Code</button>
+          <textarea id="syncCode" class="code" readonly hidden spellcheck="false"></textarea>
+          <button class="btn ghost" id="copyBtn" type="button" hidden>Copy to clipboard</button>
+        </div>
+
+        <div class="card version-card">
+          <div class="card-title">About</div>
+          <p class="card-note" id="aboutLine">String Music Simple · version <span id="appVersion">1.0.0</span></p>
+        </div>
+
+        <!-- Subtle, Settings-only pointer to the independently distributed
+             edition. Deliberately not styled as a call-to-action, and never
+             shown anywhere else in the app. -->
+        <div class="elite-card" id="eliteCard">
+          <p class="elite-label">✨ String Music Elite — YouTube streaming, lyrics, crossfade &amp; more</p>
+          <button class="btn subtle" id="learnMoreBtn" type="button">Learn More</button>
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="player" id="playerBar" hidden>
+      <input class="seek" id="seek" type="range" min="0" max="1000" value="0" step="1" aria-label="Seek">
+      <div class="player-row">
+        <div class="np-art" id="npArt"><span>♪</span></div>
+        <div class="np-meta">
+          <span class="np-title" id="npTitle">—</span>
+          <span class="np-artist" id="npArtist"></span>
+        </div>
+        <div class="np-controls">
+          <button class="ctrl" id="prevBtn" type="button" aria-label="Previous">⏮</button>
+          <button class="ctrl play" id="playBtn" type="button" aria-label="Play">▶</button>
+          <button class="ctrl" id="nextBtn" type="button" aria-label="Next">⏭</button>
+          <button class="ctrl like" id="likeBtn" type="button" aria-label="Like">♡</button>
+        </div>
+      </div>
+      <div class="player-times"><span id="tNow">0:00</span><span id="tEnd">0:00</span></div>
+    </footer>
+
+  </div>
+
+  <!-- In-app terms screen. Opens only from the "Learn More" button in
+       Settings; the app itself never downloads, installs or checks versions. -->
+  <div class="overlay" id="termsOverlay" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="termsTitle">
+      <h2 id="termsTitle">Before you continue</h2>
+      <p class="terms" id="termsBody">String Music Elite is a separate product from String Music Simple. It is not distributed through Google Play. It is published independently by String Music on GitHub at github.com/Guhan-N/String-Music/releases. Installing apps outside Google Play means Google's malware scanning does not apply. This is not an automatic update — you are choosing to install voluntarily. String Music is not responsible for any device issues from sideloading. String Music Elite includes YouTube music streaming and features not available on the Play Store version. By continuing you confirm you are 13 or older and accept these terms.</p>
+      <div class="sheet-actions">
+        <button class="btn ghost" id="termsCancel" type="button">Cancel</button>
+        <button class="btn primary" id="termsContinue" type="button">I Understand, Take Me to Elite</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+
+  <script src="js/build-config.js"></script>
+  <script src="simple.js"></script>
+</body>
+</html>

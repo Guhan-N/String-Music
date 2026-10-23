@@ -1,14 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Permissions for Continuous Audio Playback & Network -->
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Permissions shared by both editions. NOTE: there is deliberately no
+         INTERNET / ACCESS_NETWORK_STATE here — those live in the Elite
+         manifest only, so the Play Store binary can never open a socket. -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <application
         android:allowBackup="true"
@@ -16,7 +15,6 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:usesCleartextTraffic="true"
         android:theme="@style/AppTheme">
 
         <activity
@@ -33,16 +31,6 @@
             </intent-filter>
 
         </activity>
-
-        <!-- Media3 media session service: background audio + lock-screen controls -->
-        <service
-            android:name=".PlaybackKeepAliveService"
-            android:exported="true"
-            android:foregroundServiceType="mediaPlayback">
-            <intent-filter>
-                <action android:name="androidx.media3.session.MediaSessionService" />
-            </intent-filter>
-        </service>
 
         <provider
             android:name="androidx.core.content.FileProvider"

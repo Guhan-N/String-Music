@@ -11,9 +11,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=v3202_brand2">
-  <link rel="stylesheet" href="css/categories.css?v=v3202_brand2">
-  <link rel="stylesheet" href="css/recommendations.css?v=v3202_brand2">
+  <link rel="stylesheet" href="css/style.css?v=v3207_net">
+  <link rel="stylesheet" href="css/categories.css?v=v3207_net">
+  <link rel="stylesheet" href="css/recommendations.css?v=v3207_net">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23a855f7'><path d='M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z'/></svg>">
   <!-- PWA & Mobile Installability -->
   <link rel="manifest" href="./manifest.json">
@@ -433,15 +433,15 @@
               <div class="mobile-quality-selector" id="mobileQualitySelector">
                 <button class="mobile-quality-btn" data-quality="saver">
                   <span class="quality-label">Saver</span>
-                  <span class="quality-sub">96 kbps</span>
+                  <span class="quality-sub">lowest · data saver</span>
                 </button>
                 <button class="mobile-quality-btn active" data-quality="standard">
                   <span class="quality-label">Standard</span>
-                  <span class="quality-sub">192 kbps</span>
+                  <span class="quality-sub">~128 kbps</span>
                 </button>
                 <button class="mobile-quality-btn" data-quality="high">
-                  <span class="quality-label">High Res</span>
-                  <span class="quality-sub">320 kbps</span>
+                  <span class="quality-label">High</span>
+                  <span class="quality-sub">best · ~160 kbps</span>
                 </button>
               </div>
             </div>
@@ -999,15 +999,19 @@
   <div id="yt-player-container"></div>
 
   <!-- Scripts -->
-  <script src="js/clientCatalog.js?v=v3202_brand2"></script>
-  <script src="js/player.js?v=v3202_brand2"></script>
-  <script src="js/lyrics.js?v=v3202_brand2"></script>
-  <script src="js/app.js?v=v3202_brand2"></script>
-  <script src="js/categories.js?v=v3202_brand2"></script>
-  <script src="js/playlists.js?v=v3202_brand2"></script>
-  <script src="js/recommendations.js?v=v3202_brand2"></script>
-  <script src="js/backup.js?v=v3202_brand2"></script>
-  <script src="js/queue.js?v=v3202_brand2"></script>
+  <script src="js/build-config.js?v=v400_edition"></script>
+  <script src="js/net.js?v=v3207_net"></script>
+  <script src="js/clientCatalog.js?v=v3207_net"></script>
+  <script src="js/player.js?v=v3207_net"></script>
+  <script src="js/lyrics.js?v=v3207_net"></script>
+  <script src="js/artist.js?v=v321b_search"></script>
+  <script src="js/app.js?v=v321b_search"></script>
+  <script src="js/categories.js?v=v3208_langtrend"></script>
+  <script src="js/playlists.js?v=v3207_net"></script>
+  <script src="js/recommendations.js?v=v3207_net"></script>
+  <script src="js/backup.js?v=v3207_net"></script>
+  <script src="js/queue.js?v=v3207_net"></script>
+  <script src="js/elite-onboarding.js?v=v400_import"></script>
 
   <!-- Add Songs overlay (playlist detail, Library-only) -->
   <div id="plAddSongsOverlay" style="display:none; position:fixed; inset:0; z-index:10001; background:rgba(0,0,0,0.72); backdrop-filter:blur(4px); align-items:center; justify-content:center; padding:20px;">

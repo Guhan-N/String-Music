@@ -60,6 +60,8 @@ public class PlaybackKeepAliveService extends MediaSessionService {
     public static final String ACTION_OPTIONS = "OPTIONS";
     public static final String ACTION_PLAY_NEXT = "PLAY_NEXT";
     public static final String ACTION_STATUS = "STATUS";
+    /** v3.20.6: re-resolve the current song at the newly selected quality. */
+    public static final String ACTION_RELOAD_QUALITY = "RELOAD_QUALITY";
     /** v3.7: play a downloaded local file (offline playback). */
     public static final String ACTION_PLAY_LOCAL = "PLAY_LOCAL";
     /** v3.9: recommendation candidates pushed by the WebView reco engine. */
@@ -83,12 +85,20 @@ public class PlaybackKeepAliveService extends MediaSessionService {
 
     private static final long PROGRESS_PERIOD_MS = 500;
 
+    // -------- v3.20.3 broken-track recovery --------
+    /** How long to let ExoPlayer's own retry/backoff settle before skipping. */
+    private static final long BROKEN_TRACK_SKIP_DELAY_MS = 700;
+    /** Consecutive skips before we assume the network itself is down. */
+    private static final int MAX_BROKEN_TRACKS = 4;
+
     private ExoPlayer player;
     private MediaSession mediaSession;
     private Handler mainHandler;
     private PowerManager.WakeLock wakeLock;
     private boolean queueSynced = false;
     private String lastPreloadedId = null;
+    /** v3.20.3: unplayable tracks skipped in a row (reset once audio plays). */
+    private int brokenTrackStreak = 0;
 
     // -------- v3.12 crossfade (dual-player fade & swap) --------
     /** Fading-in player; becomes `player` after the swap. */
@@ -275,7 +285,17 @@ public class PlaybackKeepAliveService extends MediaSessionService {
         String action = intent != null && intent.getAction() != null
                 ? intent.getAction() : ACTION_TOGGLE;
 
+        // v3.20.6: the WebView only pushes the quality when it CHANGES, so a
+        // service restart used to fall back to the default band — read the
+        // saved setting on every command.
+        applyPersistedQuality();
+
         switch (action) {
+            // v3.20.6: quality was changed while a song was playing.
+            case ACTION_RELOAD_QUALITY:
+                reloadCurrentAtQuality();
+                break;
+
             case ACTION_STOP:
                 queueSynced = false;
                 queue.clear();
@@ -828,6 +848,9 @@ public class PlaybackKeepAliveService extends MediaSessionService {
                 if (p != player) return;
                 playing = isPlaying;
                 if (isPlaying) {
+                    // v3.20.3: audio is flowing again — the broken-track streak
+                    // (if any) is over.
+                    brokenTrackStreak = 0;
                     ensureWakeLock();
                     mainHandler.removeCallbacks(progressTick);
                     mainHandler.postDelayed(progressTick, PROGRESS_PERIOD_MS);
@@ -866,13 +889,130 @@ public class PlaybackKeepAliveService extends MediaSessionService {
             public void onPlayerError(PlaybackException error) {
                 if (p != player) return;
                 Log.e(TAG, "Player error", error);
-                PlaybackKeeperPlugin.dispatchServiceEvent(EV_ERROR,
-                        mkState(error.getMessage() != null ? error.getMessage() : "playback error"));
                 // Stay in the foreground (see ACTION_STOP notes): dropping it
                 // during an in-flight startForegroundService kills the app.
                 releaseWakeLock();
+                // v3.20.3: an unplayable track used to end the session — the
+                // previous song stopped, nothing played, and the WebView kept
+                // showing "playing". Skip forward instead (bounded, so a dead
+                // network can't spin), and only report a fatal error when
+                // there is genuinely nothing left to skip to.
+                final String why = error.getMessage() != null ? error.getMessage() : "playback error";
+                mainHandler.postDelayed(() -> recoverFromBrokenTrack(why),
+                        BROKEN_TRACK_SKIP_DELAY_MS);
             }
         });
+    }
+
+    /**
+     * v3.20.3: a track that cannot be resolved/played must never end the
+     * session. Drop it from the queue and start whatever follows — the JS
+     * mirror adopts the pruned queue via the queuechanged event. Only when
+     * skipping cannot help (single-track queue, or several failures in a row
+     * — i.e. the network really is gone) do we report a fatal error so the
+     * WebView can fall back to a downloaded copy.
+     */
+    private void recoverFromBrokenTrack(String reason) {
+        if (player == null || queue.isEmpty()) return;
+        brokenTrackStreak++;
+        int idx = player.getCurrentMediaItemIndex();
+        if (idx < 0 || idx >= queue.size()) idx = Math.max(0, currentIndex);
+
+        if (queue.size() > 1 && brokenTrackStreak <= MAX_BROKEN_TRACKS) {
+            String skipped = queue.get(idx).title != null ? queue.get(idx).title : "track";
+            queue.remove(idx);
+            // v3.20.5: land on a DIFFERENT song when possible — the next slot is
+            // often just another upload of the broken track, which would fail
+            // the same way and burn another 8s of silence.
+            String brokenKey = songKey(skipped);
+            int play = Math.min(idx, queue.size() - 1);
+            for (int i = play; i < queue.size(); i++) {
+                if (!songKey(queue.get(i).title).equals(brokenKey)) { play = i; break; }
+            }
+            Log.d(TAG, "Skipping unplayable track: " + skipped);
+            PlaybackKeeperPlugin.dispatchServiceEvent(EV_ERROR,
+                    "{\"state\":\"" + js(reason) + "\",\"skipping\":true,\"skipped\":\"" + js(skipped) + "\"}");
+            loadMediaItemsAndPlay(play);
+            return;
+        }
+
+        Log.w(TAG, "Giving up on playback after " + brokenTrackStreak + " broken tracks: " + reason);
+        PlaybackKeeperPlugin.dispatchServiceEvent(EV_ERROR,
+                "{\"state\":\"" + js(reason) + "\",\"fatal\":true}");
+        try { player.pause(); } catch (Exception ignored) {}
+        brokenTrackStreak = 0;
+    }
+
+    /**
+     * v3.20.3: rebuild the native playlist from the current queue and start it
+     * at {@code start}. Unlike seeking, this clears any sticky error state
+     * ExoPlayer was left in by the failed media item.
+     */
+    private void loadMediaItemsAndPlay(int start) {
+        if (player == null || queue.isEmpty()) return;
+        int from = Math.max(0, Math.min(start, queue.size() - 1));
+        List<MediaItem> items = new ArrayList<>(queue.size());
+        for (Track t : queue) {
+            items.add(new MediaItem.Builder()
+                    .setMediaId(t.videoId)
+                    .setUri(Uri.parse("https://simpmusic.local/stream?v=" + t.videoId))
+                    .setMediaMetadata(buildMetadata(t))
+                    .build());
+        }
+        swapping = false;
+        if (nextPlayer != null) { try { nextPlayer.release(); } catch (Exception ignored) {} nextPlayer = null; }
+        currentIndex = from;
+        player.setMediaItems(items, from, C.TIME_UNSET);
+        player.prepare();
+        player.play();
+        queueSynced = true;
+        autoQueue.clear();
+        emitQueueChanged();
+        preloadNextAudio();
+    }
+
+    /**
+     * v3.20.6: push the saved audio quality into the resolver. Runs on every
+     * service command so the setting survives process/service restarts and
+     * applies even when the WebView never calls in (e.g. background playback).
+     */
+    private void applyPersistedQuality() {
+        try {
+            android.content.SharedPreferences prefs =
+                    getSharedPreferences("simpmusic_prefs", MODE_PRIVATE);
+            String q = prefs.getString("audio_quality", null);
+            if (q == null) q = prefs.getString("simpmusic_audio_quality", null);
+            if (q != null) StreamResolver.setQuality(q);
+        } catch (Exception ignored) {}
+    }
+
+    /**
+     * v3.20.6: switching quality now takes effect on the CURRENT song — keep
+     * the play position, rebuild the item from the (cache-cleared) resolver and
+     * resume where the listener was. Previously only the next resolved stream
+     * changed, so the setting looked like it did nothing.
+     */
+    private void reloadCurrentAtQuality() {
+        if (player == null || queue.isEmpty()
+                || currentIndex < 0 || currentIndex >= queue.size()) return;
+        long pos = 0;
+        // playWhenReady (not isPlaying) — isPlaying is false while the player
+        // is merely buffering, and treating that as "the user paused" would
+        // leave the song stopped after a quality change.
+        boolean wasPlaying = true;
+        try {
+            pos = player.getCurrentPosition();
+            wasPlaying = player.getPlayWhenReady();
+        } catch (Exception ignored) {}
+        Log.d(TAG, "Re-resolving current track at quality=" + StreamResolver.getQuality()
+                + " (pos=" + pos + "ms)");
+        loadMediaItemsAndPlay(currentIndex);
+        if (pos > 0) {
+            try { player.seekTo(pos); } catch (Exception ignored) {}
+        }
+        if (!wasPlaying) {
+            try { player.pause(); } catch (Exception ignored) {}
+        }
     }
 
     private void handleNext(boolean fromEnd) {
@@ -889,17 +1029,27 @@ public class PlaybackKeepAliveService extends MediaSessionService {
         }
         int nextIdx;
         if (shuffle && queue.size() > 1) {
-            nextIdx = (int) (Math.random() * queue.size());
-            if (nextIdx == currentIndex) nextIdx = (nextIdx + 1) % queue.size();
+            // v3.20.5: shuffle must not land on another upload of the song
+            // that just played either.
+            int r = (int) (Math.random() * queue.size());
+            nextIdx = firstDifferentSongIndex(r, true);
+            if (nextIdx < 0) nextIdx = r;
         } else if (currentIndex < queue.size() - 1) {
-            nextIdx = currentIndex + 1;
+            // v3.20.5: search results for one song are mostly its own variants
+            // ("(Official Video)", "- Remix", "Lyrical") — step past them to
+            // a genuinely different song instead of replaying the same one.
+            nextIdx = firstDifferentSongIndex(currentIndex + 1, false);
         } else if ("all".equals(repeatMode)) {
             nextIdx = 0;
         } else {
-            // v3.9: no next song in the queue — extend it with a recommended
-            // song based on the user's interest (auto-queue synced from the
-            // recommendation engine). Works for both auto-advance (fromEnd)
-            // and a manual NEXT tap on the last track.
+            nextIdx = -1;
+        }
+
+        if (nextIdx < 0) {
+            // v3.9: no next DIFFERENT song in the queue — extend it with a
+            // recommended song based on the user's interest (auto-queue synced
+            // from the recommendation engine). Works for both auto-advance
+            // (fromEnd) and a manual NEXT tap on the last track.
             if (appendRecommendation()) {
                 player.seekTo(queue.size() - 1, C.TIME_UNSET);
                 player.play();
@@ -1002,7 +1152,40 @@ public class PlaybackKeepAliveService extends MediaSessionService {
                     fetchFreshSuggestion(true);
                 }
             }
+
+            /**
+             * v3.20.7: the lock-screen / quick-settings scrubber range, and the
+             * "00:07 / 04:12" time labels next to it, come from the DURATION the
+             * session publishes — media3 reads it from Player.getDuration()
+             * (PlayerWrapper.getDurationWithCommandCheck) and writes it into the
+             * session metadata as METADATA_KEY_DURATION.
+             *
+             * On an automatic track change the metadata is published the moment
+             * the next media item becomes current — before the new stream has
+             * been opened — so the duration was still unknown. Result: the lock
+             * screen showed the next song's name correctly with an EMPTY
+             * progress bar and no time labels (a track whose stream never
+             * reports a length stayed that way for the whole song). The track
+             * duration is already known here (the WebView sends it with every
+             * queued song), so answer with it whenever the player cannot.
+             */
+            @Override
+            public long getDuration() {
+                long d = super.getDuration();
+                if (d != C.TIME_UNSET && d > 0) return d;
+                Track cur = currentTrack();
+                return cur != null && cur.durationSec > 0 ? cur.durationSec * 1000L : d;
+            }
         };
+    }
+
+    /** The track the queue says is current (null when unknown). */
+    private Track currentTrack() {
+        int idx = currentIndex;
+        if (idx < 0 || idx >= queue.size()) {
+            try { idx = player != null ? player.getCurrentMediaItemIndex() : -1; } catch (Exception ignored) { }
+        }
+        return idx >= 0 && idx < queue.size() ? queue.get(idx) : null;
     }
 
     /**
@@ -1092,6 +1275,9 @@ public class PlaybackKeepAliveService extends MediaSessionService {
                     boolean dup = false;
                     for (Track q : queue) if (q.videoId.equals(id)) { dup = true; break; }
                     if (dup) continue;
+                    // v3.20.5: another upload of the current song is not a
+                    // "similar" song — keep looking for a different track.
+                    if (songKey(o.optString("title", "")).equals(songKey(cur.title))) continue;
                     Track t = new Track();
                     t.videoId = id;
                     t.title = o.optString("title", "Similar song");
@@ -1163,6 +1349,9 @@ public class PlaybackKeepAliveService extends MediaSessionService {
                     boolean dup = false;
                     for (Track q : queue) if (q.videoId.equals(id)) { dup = true; break; }
                     if (dup) continue;
+                    // v3.20.5: never fall back to another upload of the song
+                    // that just finished.
+                    if (songKey(o.optString("title", "")).equals(currentSongKey())) continue;
                     Track t = new Track();
                     t.videoId = id;
                     t.title = o.optString("title", "Similar song");
@@ -1202,6 +1391,9 @@ public class PlaybackKeepAliveService extends MediaSessionService {
             for (Track q : queue) {
                 if (q.videoId.equals(cand.videoId)) { dup = true; break; }
             }
+            // v3.20.5: the reco pool can hand back the same song in another
+            // upload — never extend with a copy of what is already playing.
+            if (!dup && songKey(cand.title).equals(currentSongKey())) dup = true;
             if (!dup) {
                 queue.add(cand);
                 player.addMediaItem(new MediaItem.Builder()
@@ -1337,7 +1529,12 @@ public class PlaybackKeepAliveService extends MediaSessionService {
               .append("\",\"durationSec\":").append(q.durationSec).append('}');
         }
         sb.append("],\"shuffle\":").append(shuffle)
-          .append(",\"repeatMode\":\"").append(repeatMode).append("\"}");
+          .append(",\"repeatMode\":\"").append(js(repeatMode)).append("\"")
+          // v3.20.6: expose the effective audio quality + the bitrate actually
+          // picked, so the setting can be verified from the outside.
+          .append(",\"quality\":\"").append(js(StreamResolver.getQuality())).append("\"")
+          .append(",\"bitrate\":").append(StreamResolver.getBitrate(t.videoId))
+          .append("}");
         PlaybackKeeperPlugin.dispatchServiceEvent(EV_RESTORED, sb.toString());
     }
 
@@ -1376,6 +1573,12 @@ public class PlaybackKeepAliveService extends MediaSessionService {
 
     // ---------------- helpers ----------------
 
+    /**
+     * v3.20.7: NOTE — media3 1.3.1 has no duration field on MediaMetadata
+     * (no setDurationMs), so the lock-screen duration cannot be carried here.
+     * media3 reads it from Player.getDuration() at publish time instead; the
+     * fallback that keeps the scrubber usable lives in mediaPlayer().
+     */
     private MediaMetadata buildMetadata(Track t) {
         return new MediaMetadata.Builder()
                 .setTitle(t.title)
@@ -1387,6 +1590,75 @@ public class PlaybackKeepAliveService extends MediaSessionService {
 
     private String mkState(String state) {
         return "{\"state\":\"" + state + "\"}";
+    }
+
+    // ---------------- v3.20.5 same-song guard ----------------
+
+    /**
+     * Title noise that turns ONE song into twenty search results:
+     * "Song (Official Video)", "Song (Lyrical)", "Song - Remix",
+     * "Song | Movie Name", … Searching for a specific song returns mostly
+     * these, and auto-advance used to play every one of them in turn.
+     */
+    private static final String[] SONG_NOISE_MARKERS = {
+        " - ", " – ", " — ", " |", " • ", " feat", " ft.", " ft ", " official",
+        " lyric", " audio", " video song", " remix", " version", " cover",
+        " live ", " slowed", " sped up", " reverb", " mashup", " 8d ", " remake",
+        " reprise", " title track", " full song", " making of", " karaoke",
+        " instrumental", " whatsa", " status", " ringtone"
+    };
+
+    /**
+     * Normalized "song identity" of a title: bracketed qualifiers are dropped
+     * and the title is cut at the first variant marker, so every upload of one
+     * song collapses to a single key. Letters/digits are kept Unicode-wide so
+     * Tamil/Telugu/Hindi titles stay distinct instead of all becoming "".
+     */
+    static String songKey(String title) {
+        if (title == null) return "";
+        String t = title.toLowerCase(java.util.Locale.ROOT)
+                .replaceAll("\\([^)]*\\)", " ")
+                .replaceAll("\\[[^\\]]*\\]", " ")
+                .replaceAll("\\{[^}]*\\}", " ");
+        int cut = t.length();
+        for (String m : SONG_NOISE_MARKERS) {
+            int i = t.indexOf(m);
+            if (i > 0 && i < cut) cut = i;
+        }
+        return t.substring(0, cut).replaceAll("[^\\p{L}\\p{N}]+", " ").trim();
+    }
+
+    /** Song identity of whatever is playing right now. */
+    private String currentSongKey() {
+        if (currentIndex < 0 || currentIndex >= queue.size()) return "";
+        return songKey(queue.get(currentIndex).title);
+    }
+
+    /**
+     * First queue slot at/after {@code from} holding a DIFFERENT song than the
+     * one playing, or -1 when everything left is another upload of the same
+     * song (the caller then extends the queue with a recommendation instead of
+     * replaying it). {@code wrap} lets shuffle / repeat-all come back around.
+     */
+    private int firstDifferentSongIndex(int from, boolean wrap) {
+        int n = queue.size();
+        if (n == 0) return -1;
+        String curKey = currentSongKey();
+        if (curKey.isEmpty()) {
+            if (from >= 0 && from < n) return from;
+            return wrap ? 0 : -1;
+        }
+        if (from < 0) from = 0;
+        for (int step = 0; step < n; step++) {
+            int i = from + step;
+            if (i >= n) {
+                if (!wrap) return -1;
+                i -= n;
+            }
+            if (i == currentIndex) continue;
+            if (!songKey(queue.get(i).title).equals(curKey)) return i;
+        }
+        return -1;
     }
 
     /**

@@ -23,3 +23,9 @@ mobile/android/capacitor-cordova-android-plugins/build/
 *.swo
 .DS_Store
 Thumbs.db
+
+# Two-app build products
+.tools/
+dist/
+mobile/android/app/src/simple/assets/public/
+mobile/android/app/src/elite/assets/public/
