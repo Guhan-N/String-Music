@@ -405,10 +405,236 @@ async function getLyrics(title, artist, duration = 0) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// v3.21: ARTIST + ALBUM pages
+//
+// YouTube Music serves both as browse responses: an artist page has an
+// immersive header, a "Top songs" shelf and horizontal carousels (Albums,
+// Singles & EPs, …); an album page has a detail header and one shelf of rows.
+// Rows in both are musicResponsiveListItemRenderer with
+// playlistItemData.videoId + flexColumns, so one collector covers them.
+// ---------------------------------------------------------------------------
+const YTM_BROWSE_URL = 'https://www.youtube.com/youtubei/v1/browse';
+const YTM_CLIENT = {
+  clientName: 'WEB_REMIX',
+  clientVersion: '1.20240101.01.00',
+  hl: 'en',
+  gl: 'IN'
+};
+/** Search filter that restricts results to artists. */
+const ARTIST_SEARCH_PARAMS = 'EgWKAQIgAWoKEAUQCRADEAQQCg%3D%3D';
+
+async function ytmPost(url, body) {
+  const response = await fetch(`${url}?key=AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30&prettyPrint=false`, {
+    method: 'POST',
+    headers: YTM_HEADERS,
+    body: JSON.stringify({ ...body, context: { client: YTM_CLIENT } })
+  });
+  if (!response.ok) throw new Error(`YouTube API returned status ${response.status}`);
+  return response.json();
+}
+
+/** Reads an InnerTube text node: runs[].text with a simpleText fallback. */
+function textOf(node) {
+  if (!node) return '';
+  if (Array.isArray(node.runs)) return node.runs.map(r => r.text || '').join('');
+  if (typeof node.simpleText === 'string') return node.simpleText;
+  return '';
+}
+
+/** Depth-first visit of every object node in an InnerTube response. */
+function walkJson(node, fn) {
+  if (!node) return;
+  if (Array.isArray(node)) { node.forEach(n => walkJson(n, fn)); return; }
+  if (typeof node !== 'object') return;
+  fn(node);
+  Object.keys(node).forEach(k => walkJson(node[k], fn));
+}
+
+/** "3:24" / "1:02:11" → seconds (0 when unparseable). */
+function durationToSec(text) {
+  if (!text || !/^\d+:\d{2}(:\d{2})?$/.test(text.trim())) return 0;
+  return text.trim().split(':').reduce((acc, p) => acc * 60 + parseInt(p, 10), 0);
+}
+
+/** Largest thumbnail in an InnerTube thumbnails array. */
+function largestThumb(thumbs) {
+  if (!Array.isArray(thumbs) || !thumbs.length) return '';
+  let best = '';
+  let bestW = -1;
+  thumbs.forEach(t => {
+    if (t && t.url && (t.width || 0) >= bestW) { bestW = t.width || 0; best = t.url; }
+  });
+  return upgradeThumbnail(best);
+}
+
+/**
+ * Pulls every playable row out of an artist/album browse response.
+ * Keeps document order and de-dupes by videoId.
+ */
+function collectBrowseTracks(root, limit = 40) {
+  const tracks = [];
+  const seen = new Set();
+  walkJson(root, node => {
+    const row = node.musicResponsiveListItemRenderer;
+    if (!row || tracks.length >= limit) return;
+    const videoId = row.playlistItemData?.videoId;
+    if (!videoId || seen.has(videoId)) return;
+    const cols = row.flexColumns || [];
+    const title = textOf(cols[0]?.musicResponsiveListItemFlexColumnRenderer?.text);
+    if (!title) return;
+    const artist = textOf(cols[1]?.musicResponsiveListItemFlexColumnRenderer?.text);
+    let durationSec = 0;
+    const fixed = row.fixedColumns || [];
+    for (const f of fixed) {
+      const t = textOf(f?.musicResponsiveListItemFixedColumnRenderer?.text);
+      const sec = durationToSec(t);
+      if (sec) { durationSec = sec; break; }
+    }
+    seen.add(videoId);
+    tracks.push({
+      videoId,
+      title,
+      artist: artist || '',
+      album: '',
+      duration: durationSec ? `${Math.floor(durationSec / 60)}:${String(durationSec % 60).padStart(2, '0')}` : '3:30',
+      durationSec: durationSec || 180,
+      durationKnown: !!durationSec,
+      thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
+    });
+  });
+  return tracks;
+}
+
+/** Album/single cards from the artist page's horizontal carousels. */
+function collectBrowseAlbums(root, limit = 12) {
+  const albums = [];
+  const seen = new Set();
+  walkJson(root, node => {
+    const shelf = node.musicCarouselShelfRenderer;
+    if (!shelf || albums.length >= limit) return;
+    const heading = textOf(shelf.header?.musicCarouselShelfBasicHeaderRenderer?.title);
+    if (!/album|single|ep/i.test(heading)) return;
+    (shelf.contents || []).forEach(item => {
+      const card = item?.musicTwoRowItemRenderer;
+      if (!card) return;
+      const albumId = card.navigationEndpoint?.browseEndpoint?.browseId || '';
+      const title = textOf(card.title);
+      if (!albumId.startsWith('MPRE') || !title || seen.has(albumId)) return;
+      seen.add(albumId);
+      albums.push({
+        albumId,
+        title,
+        year: textOf(card.subtitle),
+        thumbnail: largestThumb(card.thumbnailRenderer?.musicThumbnailRenderer?.thumbnail?.thumbnails)
+      });
+    });
+  });
+  return albums;
+}
+
+/** First artist channel id for a name (artist-filtered search). */
+async function resolveArtistId(name) {
+  const data = await ytmPost(YTM_URL, { query: name.trim(), params: ARTIST_SEARCH_PARAMS });
+  let artistId = '';
+  let matchedName = '';
+  walkJson(data, node => {
+    if (artistId) return;
+    const row = node.musicResponsiveListItemRenderer;
+    const id = row?.navigationEndpoint?.browseEndpoint?.browseId;
+    if (row && id && id.startsWith('UC')) {
+      artistId = id;
+      matchedName = textOf(row.flexColumns?.[0]?.musicResponsiveListItemFlexColumnRenderer?.text);
+    }
+  });
+  return { artistId, matchedName };
+}
+
+/**
+ * Artist page: header + top songs + albums/singles.
+ * Resolves to { name, thumbnail, artistId, songs[], albums[] }.
+ */
+async function getArtist(name) {
+  if (!name || !name.trim()) return { name: '', songs: [], albums: [] };
+  const cacheKey = `artist:${name.trim().toLowerCase()}`;
+  const cached = getCached(cacheKey);
+  if (cached) return cached;
+
+  const { artistId, matchedName } = await resolveArtistId(name);
+  if (!artistId) throw new Error('No artist found for that name');
+
+  const root = await ytmPost(YTM_BROWSE_URL, { browseId: artistId });
+  let headerName = matchedName || name.trim();
+  let thumbnail = '';
+  let headerSeen = false;
+  walkJson(root, node => {
+    const header = node.musicImmersiveHeaderRenderer;
+    if (!header || headerSeen) return;
+    headerSeen = true;
+    headerName = textOf(header.title) || headerName;
+    thumbnail = largestThumb(header.thumbnail?.musicThumbnailRenderer?.thumbnail?.thumbnails) || thumbnail;
+  });
+
+  const songs = collectBrowseTracks(root, 25);
+  const albums = collectBrowseAlbums(root, 12);
+  const result = {
+    name: headerName,
+    artistId,
+    thumbnail: thumbnail || (songs[0]?.thumbnail || ''),
+    songs,
+    albums
+  };
+  if (songs.length) setCached(cacheKey, result, 30 * 60 * 1000);
+  return result;
+}
+
+/** Album page: { name, artist, year, thumbnail, tracks[] }. */
+async function getAlbum(albumId) {
+  if (!albumId || !/^MPRE/.test(albumId)) throw new Error('Not an album id');
+  const cacheKey = `album:${albumId}`;
+  const cached = getCached(cacheKey);
+  if (cached) return cached;
+
+  const root = await ytmPost(YTM_BROWSE_URL, { browseId: albumId });
+  let name = '';
+  let year = '';
+  let thumbnail = '';
+  let artist = '';
+  let headerSeen = false;
+  walkJson(root, node => {
+    // Albums/EPs use musicResponsiveHeaderRenderer; playlists use the detail one.
+    const detail = node.musicResponsiveHeaderRenderer || node.musicDetailHeaderRenderer;
+    if (!detail || headerSeen) return;
+    headerSeen = true;
+    name = textOf(detail.title);
+    const subtitle = textOf(detail.subtitle);
+    const yearMatch = subtitle.match(/\b(19|20)\d{2}\b/);
+    if (yearMatch) year = yearMatch[0];
+    const byline = (detail.straplineTextOne?.runs || []).find(r => r.navigationEndpoint?.browseEndpoint);
+    artist = (byline && byline.text) || textOf(detail.straplineTextOne) || '';
+    thumbnail = largestThumb(detail.thumbnail?.musicThumbnailRenderer?.thumbnail?.thumbnails)
+      || largestThumb(detail.thumbnail?.croppedSquareThumbnailRenderer?.thumbnail?.thumbnails);
+  });
+
+  const tracks = collectBrowseTracks(root, 60);
+  const result = {
+    albumId,
+    name: name || 'Album',
+    artist,
+    year,
+    thumbnail: thumbnail || (tracks[0]?.thumbnail || ''),
+    tracks: tracks.map(t => ({ ...t, album: name || 'Album' }))
+  };
+  if (tracks.length) setCached(cacheKey, result, 30 * 60 * 1000);
+  return result;
+}
+
 module.exports = {
   searchSongs,
   getSuggestions,
   getTrending,
   getLyrics,
-  parseLrc
+  parseLrc,
+  getArtist,
+  getAlbum
 };

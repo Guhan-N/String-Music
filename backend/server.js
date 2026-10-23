@@ -7,7 +7,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const compression = require('compression');
-const { searchSongs, getSuggestions, getTrending, getLyrics } = require('./scraper');
+const { searchSongs, getSuggestions, getTrending, getLyrics, getArtist, getAlbum } = require('./scraper');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -91,6 +91,30 @@ app.get('/api/trending', async (req, res) => {
   } catch (err) {
     console.error('Trending error:', err);
     res.status(500).json({ error: 'Trending fetch failed', details: err.message });
+  }
+});
+
+// API: Artist page (top songs + albums) — v3.21
+app.get('/api/artist', async (req, res) => {
+  const name = req.query.name || '';
+  if (!name.trim()) return res.status(400).json({ error: 'name query parameter is required' });
+  try {
+    res.json(await getArtist(name));
+  } catch (err) {
+    console.error('Artist error:', err.message);
+    res.status(404).json({ error: 'Artist not found', details: err.message });
+  }
+});
+
+// API: Album tracks — v3.21
+app.get('/api/album', async (req, res) => {
+  const id = req.query.id || '';
+  if (!id.trim()) return res.status(400).json({ error: 'id query parameter is required' });
+  try {
+    res.json(await getAlbum(id));
+  } catch (err) {
+    console.error('Album error:', err.message);
+    res.status(500).json({ error: 'Album fetch failed', details: err.message });
   }
 });
 

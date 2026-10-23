@@ -220,7 +220,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (mobileHeroTitle) mobileHeroTitle.textContent = t.title || 'No song playing';
     if (mobileMiniThumb) mobileMiniThumb.src = t.thumbnail || 'icons/sweetener_cover.png';
     if (mobileMiniTitle) mobileMiniTitle.textContent = t.title || 'No song playing';
-    if (mobileMiniArtist) mobileMiniArtist.textContent = t.artist || 'Play something to begin';
+    if (mobileMiniArtist) {
+      mobileMiniArtist.textContent = t.artist || 'Play something to begin';
+      if (t.artist) mobileMiniArtist.setAttribute('data-artist-open', t.artist);
+      else mobileMiniArtist.removeAttribute('data-artist-open');
+    }
 
     // Update iPod Screen 1 elements
     if (ipodCoverImg) ipodCoverImg.src = t.thumbnail || 'icons/sweetener_cover.png';
@@ -303,7 +307,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="track-row-num">${idx + 1}</div>
         <div class="track-row-details">
           <div class="track-row-title" title="${track.title}">${track.title}</div>
-          <div class="track-row-artist" title="${track.artist}">${track.artist}</div>
+          <div class="track-row-artist" title="${track.artist}" data-artist-open="${escapeHtml(track.artist || '')}">${track.artist}</div>
         </div>
         <button class="track-row-menu" title="Options">⋮</button>
       `;
@@ -341,7 +345,13 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast(`Added to Liked Songs`);
       };
     }
-    if (heroDownloadBtn) {
+    // v3.20.2-store: the Play Store bundle has no download feature — the
+    // native plugin is never registered, so hide every download entry point.
+    window.STORE_BUILD = window.STORE_BUILD || false;
+    if (heroDownloadBtn && window.STORE_BUILD) {
+      heroDownloadBtn.style.display = 'none';
+    }
+    if (heroDownloadBtn && !window.STORE_BUILD) {
       heroDownloadBtn.onclick = () => {
         // v3.18.5: inside a playlist detail, download the WHOLE playlist
         // (with the size-preview confirm); elsewhere, just the featured song.
@@ -838,7 +848,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (mobileMiniThumb) mobileMiniThumb.src = track.thumbnail;
       if (mobileMiniTitle) mobileMiniTitle.textContent = track.title;
-      if (mobileMiniArtist) mobileMiniArtist.textContent = track.artist;
+      if (mobileMiniArtist) {
+        mobileMiniArtist.textContent = track.artist;
+        if (track.artist) mobileMiniArtist.setAttribute('data-artist-open', track.artist);
+        else mobileMiniArtist.removeAttribute('data-artist-open');
+      }
 
       updateHeroDetails(track);
       updateActivePlayingRow(track.videoId);
@@ -914,7 +928,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <img class="queue-thumb" src="${track.thumbnail}" alt="" />
         <div class="queue-details">
           <div class="queue-track-title">${track.title}</div>
-          <div class="queue-track-artist">${track.artist}</div>
+          <div class="queue-track-artist" data-artist-open="${escapeHtml(track.artist || '')}">${track.artist}</div>
         </div>
         <button class="queue-remove-btn" title="Remove">✕</button>
       `;
@@ -1835,7 +1849,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
         </div>
         <div class="mobile-v2-pick-name" title="${escapeHtml(track.title)}">${escapeHtml(track.title)}</div>
-        <div class="mobile-v2-pick-sub" title="${escapeHtml(track.artist)}">${escapeHtml(track.artist)}</div>
+        <div class="mobile-v2-pick-sub" title="${escapeHtml(track.artist)}" data-artist-open="${escapeHtml(track.artist || '')}">${escapeHtml(track.artist)}</div>
         <button class="song-menu-btn recent-menu-btn" title="More" data-video="${escapeHtml(track.videoId)}" data-title="${escapeHtml(track.title)}" data-artist="${escapeHtml(track.artist)}" data-thumb="${escapeHtml(track.thumbnail || '')}" data-duration="${escapeHtml(track.duration || '')}" data-durationsec="${track.durationSec || 0}">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
         </button>
@@ -1860,8 +1874,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // =====================================================================
   const _trendCache = { at: 0, tracks: null };
   const TREND_CACHE_TTL = 5 * 60 * 1000;
+  // v3.20.8: guards against a slow boot-time load (no languages picked yet)
+  // landing after the language-aware reload and overwriting its results.
+  let _trendGen = 0;
 
   async function loadCurrentTrending() {
+    const gen = ++_trendGen;
     const sec = document.getElementById('mobileTrendingSection');
     const r1 = document.getElementById('mobileTrendingRow1');
     const r2 = document.getElementById('mobileTrendingRow2');
@@ -1895,6 +1913,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // re-filtering: Latin-script Tamil titles would misclassify — the search
     // query itself constrains the language.)
     const per = await Promise.all(langs.map(l => cachedLangSearch(l, 12).catch(() => [])));
+    if (gen !== _trendGen) return; // a newer load (language change) owns the section now
     let tracks = [];
     const seen = new Set();
     const maxLen = Math.max(0, ...per.map(a => a.length));
@@ -1923,6 +1942,25 @@ document.addEventListener('DOMContentLoaded', () => {
     renderTrendingCards(tracks);
   }
 
+  /**
+   * v3.20.8: a language pick has to reach Home immediately.
+   *
+   * This section used to render whatever it found when the page booted and then
+   * keep that for TREND_CACHE_TTL. On a fresh install the picker is still open
+   * at boot, so it found "no languages yet" and filled the row with the global
+   * (English) mix — and choosing Tamil or Hindi afterwards did not re-render it,
+   * so the English songs stayed up for the rest of the session. Dropping both
+   * caches here makes the next load re-search in the languages just picked.
+   */
+  function refreshForLanguageChange() {
+    _trendCache.at = 0;
+    _trendCache.tracks = null;
+    Object.keys(_langDiscoverCache).forEach(k => { delete _langDiscoverCache[k]; });
+    loadCurrentTrending();
+    loadChartPlaylists();
+  }
+  window.addEventListener('simp:languages-changed', refreshForLanguageChange);
+
   function renderTrendingCards(tracks) {
     const r1 = document.getElementById('mobileTrendingRow1');
     const r2 = document.getElementById('mobileTrendingRow2');
@@ -1936,18 +1974,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // =====================================================================
   // v3.18: TRENDING PLAYLISTS (YouTube Charts) — replaces New Releases.
-  // Three fixed cards: Global 100, India 100, and a language chart that
-  // follows the user's picker/taste (3rd card only).
+  // v3.20.4: the cards are built from the LIVE weekly chart ids read off
+  // YouTube Music's charts page (getChartIndex). The ids baked into the
+  // constants below are ONLY a fallback for when that fetch is unavailable —
+  // YouTube rotates chart playlists weekly, so a hardcoded id is stale the
+  // moment it ships (and the old India/Telugu/Hindi ids pointed at the wrong
+  // charts entirely). Cards: Global + India always, then one per preferred
+  // language.
   // =====================================================================
   const CHART_PLAYLISTS = [
     { key: 'global', name: 'Top 100 Music Videos Global', sub: 'Trending Charts', listId: 'PL4fGSI1pDJn6puJdseH2Rt9sMvt9E2M4i' },
     { key: 'india', name: 'Top 100 Music Videos India', sub: 'Trending Charts', listId: 'PL4fGSI1pDJn6O1LS0XSdF3RyO0Rq_LDeI' }
   ];
-  // Per-language chart picks (verified on YouTube Music). v3.18.9: ONE card
-  // per preferred language — the Settings picker languages each get a
-  // "Top Weekly Videos <LANG>" card after the fixed Global + India pair
-  // (3rd, 4th, 5th…). With nothing picked, inferred listening taste picks
-  // the languages instead. English needs no card (Global already covers it).
+  // v3.20.4: this map now only lists WHICH languages get a chart card (one
+  // card per preferred language, after Global + India; with nothing picked,
+  // inferred listening taste decides. English needs no card — Global covers
+  // it). The list ids are no longer a source: they are dead/rotated, so a
+  // language without a live weekly chart gets a live-search card instead.
   const LANG_CHARTS = {
     tamil: 'PLdPQQOxV3l0_11bBrgSX5CCb0YtcBGhhA',
     hindi: 'PL3oW2tjiIxvTaC6caIGR55W3ssqGvb_LR',
@@ -1958,17 +2001,44 @@ document.addEventListener('DOMContentLoaded', () => {
     punjabi: 'PLdmw3NKXtkFcO4jCuUtOz0xXAc1TnYAKf'
   };
   const _chartCardCache = {};
+  // v3.20.4: card CONTENTS expire so a session left open for hours still picks
+  // up a new chart; the id index itself rotates weekly, so 6h is plenty.
+  const CHART_CARD_TTL = 30 * 60 * 1000;
+  const CHART_INDEX_TTL = 6 * 60 * 60 * 1000;
+  const CHART_INDEX_KEY = 'simpmusic_chart_index';
+  const _chartIndexCache = { at: 0, charts: null };
 
   function chartCardMeta(chart) {
     return new Promise(resolve => {
       // Key on the card's key+listId: the India fallback for english users
       // reuses India's listId, and a bare listId key would collide.
       const cacheKey = chart.key + ':' + chart.listId;
-      if (_chartCardCache[cacheKey]) { resolve(_chartCardCache[cacheKey]); return; }
+      const cached = _chartCardCache[cacheKey];
+      if (cached && Date.now() - cached.at < CHART_CARD_TTL) { resolve(cached.meta); return; }
       const finish = (meta) => {
-        _chartCardCache[cacheKey] = meta;
+        // A failed refresh keeps the last good card instead of blanking it.
+        if (!meta && cached) { resolve(cached.meta); return; }
+        _chartCardCache[cacheKey] = { at: Date.now(), meta };
         resolve(meta);
       };
+      // v3.20.4: languages YouTube publishes no weekly chart for get a live
+      // language-search card instead of a baked-in playlist id (those are
+      // dead — the Malayalam/Kannada/Marathi lists no longer resolve at all).
+      if (chart.searchLang) {
+        cachedLangSearch(chart.searchLang, 50).then(tracks => {
+          const list = (tracks || []).filter(t => t && t.videoId);
+          if (!list.length) { finish(null); return; }
+          finish({
+            name: chart.name,
+            sub: chart.sub,
+            thumb: (list[0] && list[0].thumbnail) || '',
+            count: list.length,
+            tracks: list,
+            listId: chart.listId
+          });
+        }).catch(() => finish(null));
+        return;
+      }
       const cap = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.PlaybackKeeper;
       if (!cap || !cap.resolvePlaylist) { finish(null); return; }
       cap.resolvePlaylist({ url: 'https://www.youtube.com/playlist?list=' + chart.listId })
@@ -1978,7 +2048,7 @@ document.addEventListener('DOMContentLoaded', () => {
           finish({
             name: chart.name,
             sub: chart.sub,
-            thumb: (first && first.thumbnail) || '',
+            thumb: (first && first.thumbnail) || chart.thumb || '',
             count: data.count || (data.tracks ? data.tracks.length : 0),
             tracks: data.tracks || [],
             listId: chart.listId
@@ -1986,6 +2056,74 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .catch(() => finish(null));
     });
+  }
+
+  /**
+   * v3.20.4: the current week's chart playlists, straight from YouTube Music
+   * (native InnerTube call). Cached in memory + localStorage for 6h so the
+   * charts row is not refetched on every Home visit, but still rolls over to
+   * the new weekly ids on its own. Resolves null when unavailable (web/PWA,
+   * offline) — callers then fall back to the baked-in constants.
+   */
+  async function getChartIndex() {
+    const now = Date.now();
+    if (_chartIndexCache.charts && now - _chartIndexCache.at < CHART_INDEX_TTL) {
+      return _chartIndexCache.charts;
+    }
+    if (!_chartIndexCache.charts) {
+      try {
+        const stored = JSON.parse(localStorage.getItem(CHART_INDEX_KEY) || 'null');
+        if (stored && Array.isArray(stored.charts) && stored.charts.length) {
+          _chartIndexCache.charts = stored.charts;
+          _chartIndexCache.at = stored.at || 0;
+          if (now - _chartIndexCache.at < CHART_INDEX_TTL) return _chartIndexCache.charts;
+        }
+      } catch (e) { /* corrupt cache: refetch below */ }
+    }
+    const cap = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.PlaybackKeeper;
+    if (!cap || typeof cap.charts !== 'function') return _chartIndexCache.charts || null;
+    try {
+      const res = await cap.charts();
+      const charts = (JSON.parse((res && res.charts) || '[]') || [])
+        .filter(c => c && c.listId && c.title)
+        .filter(c => /top|trend|chart|weekly/i.test(c.title));
+      if (!charts.length) return _chartIndexCache.charts || null;
+      _chartIndexCache.charts = charts;
+      _chartIndexCache.at = Date.now();
+      try { localStorage.setItem(CHART_INDEX_KEY, JSON.stringify(_chartIndexCache)); } catch (e) {}
+      return charts;
+    } catch (e) {
+      // Offline / endpoint changed: keep serving whatever we already have.
+      return _chartIndexCache.charts || null;
+    }
+  }
+
+  /** Best chart row for a request: 'global', 'india' or a language name. */
+  function pickChartRow(index, lang) {
+    if (!index || !index.length) return null;
+    let filter;
+    if (lang === 'global') filter = /(international|global)/i;
+    else if (lang === 'india') filter = /india/i;
+    else {
+      const name = String(lang || '').toLowerCase().replace(/[^a-z]/g, '');
+      if (!name) return null;
+      filter = new RegExp('(^|[^a-z])' + name + '([^a-z]|$)', 'i');
+    }
+    const matches = index.filter(c => filter.test(c.title || ''));
+    if (!matches.length) return null;
+    // Prefer the weekly Top-100 style chart over one-off/daily lists.
+    const score = (c) => {
+      const t = String(c.title || '').toLowerCase();
+      let s = 0;
+      if (/weekly/.test(t)) s += 4;
+      if (/100/.test(t)) s += 3;
+      if (/top/.test(t)) s += 1;
+      if (/music videos|songs/.test(t)) s += 1;
+      if (/daily/.test(t)) s -= 2;
+      return s;
+    };
+    matches.sort((a, b) => score(b) - score(a));
+    return matches[0];
   }
 
   async function loadChartPlaylists() {
@@ -1997,24 +2135,55 @@ document.addEventListener('DOMContentLoaded', () => {
     // v3.18.9: Global + India always, then a "Top Weekly Videos <LANG>" card
     // for EVERY preferred language (Settings picker first; inferred taste
     // only when nothing is picked). Hard cap 8 cards total to keep the row
-    // sensible. Cache keys embed the language so switching languages can
-    // never serve a stale card (key:listId collision fix).
+    // sensible.
     const { picked, listenCounts } = inferLanguageTaste();
     let langs = (picked && picked.length ? picked.slice() : []);
     if (!langs.length) {
       langs = Object.entries(listenCounts || {})
         .sort((a, b) => b[1] - a[1]).map(e => e[0]).slice(0, 2);
     }
-    const charts = CHART_PLAYLISTS.slice();
+    const wanted = [
+      { key: 'global', lang: 'global', fallback: CHART_PLAYLISTS[0] },
+      { key: 'india', lang: 'india', fallback: CHART_PLAYLISTS[1] }
+    ];
     (langs || []).forEach(rawLang => {
       const lang = String(rawLang || '').toLowerCase().trim();
-      const listId = lang && LANG_CHARTS[lang];
-      if (!listId) return; // english + unsupported languages: Global covers it
-      if (charts.some(c => c.listId === listId)) return; // already shown
-      if (charts.length >= 8) return;
+      if (!lang || !LANG_CHARTS[lang]) return; // english: Global covers it
+      if (wanted.length >= 8) return;
+      if (wanted.some(w => w.lang === lang)) return; // already requested
+      wanted.push({ key: 'lang_' + lang, lang });
+    });
+
+    // Live weekly ids first. A language with no official weekly chart gets a
+    // live-search card (contents roll over with the search rotation) — the
+    // baked-in constants are only the last resort for Global/India offline.
+    const index = await getChartIndex();
+    const charts = [];
+    wanted.forEach(w => {
+      const live = pickChartRow(index, w.lang);
+      if (live) {
+        if (charts.some(c => c.listId === live.listId)) return; // already shown
+        charts.push({
+          key: w.key,
+          name: live.title,
+          sub: 'Trending Charts · updated weekly',
+          listId: live.listId,
+          thumb: live.thumb
+        });
+        return;
+      }
+      if (!w.fallback) {
+        charts.push({
+          key: w.key, searchLang: w.lang,
+          listId: 'search:' + w.lang,
+          name: w.lang.toUpperCase() + ' Top Hits',
+          sub: 'Fresh picks · refreshed every hour'
+        });
+        return;
+      }
       charts.push({
-        key: 'lang_' + lang, name: 'Top Weekly Videos ' + lang.toUpperCase(),
-        sub: 'Trending Charts', listId
+        key: w.key, name: w.fallback.name, sub: w.fallback.sub,
+        listId: w.fallback.listId
       });
     });
 
@@ -2723,8 +2892,45 @@ document.addEventListener('DOMContentLoaded', () => {
       mobileSearchResultsList.innerHTML = `<div style="text-align:center; padding:30px; color:#71717a;"><div style="font-size:1.8rem; margin-bottom:8px;">🎤</div><div style="color:#fff; font-weight:600;">No artists found${query ? ` for "${escapeHtml(query)}"` : ''}</div></div>`;
       return;
     }
-    mobileSearchResultsList.innerHTML = '';
-    items.forEach(a => {
+
+    // v3.21.1: the web backend has no artist-filtered search, so on the PWA
+    // this list arrives as SONGS — derive the unique artists from it rather
+    // than rendering rows with an undefined name.
+    const artists = [];
+    const seenNames = {};
+    const addArtist = (name, subs, thumbnail) => {
+      const clean = String(name || '').trim();
+      if (!clean || clean.length > 60 || seenNames[clean.toLowerCase()]) return;
+      seenNames[clean.toLowerCase()] = true;
+      artists.push({
+        name: clean,
+        subs: subs || 0,
+        thumbnail: thumbnail || ''
+      });
+    };
+    items.forEach(it => {
+      if (!it) return;
+      // Real artist rows (native search) carry `name` directly.
+      if (it.name) { addArtist(it.name, it.subs, it.thumbnail); return; }
+      // Web fallback returns SONGS: a song's `artist` is a credit list
+      // ("Anirudh Ravichander & Arunraja Kamaraj"), so split it into
+      // individual names — otherwise searching an artist shows everyone
+      // EXCEPT them.
+      const thumb = it.thumbnail || (it.videoId
+        ? 'https://i.ytimg.com/vi/' + it.videoId + '/hqdefault.jpg' : '');
+      String(it.artist || '').split(/\s*(?:,|&|feat\.?|ft\.?|x|\||•)\s*/i)
+        .forEach(n => addArtist(n, 0, thumb));
+    });
+    // Put the names that match what was typed first.
+    if (query) {
+      const q = query.toLowerCase();
+      artists.sort((a, b) => {
+        const am = a.name.toLowerCase().includes(q) ? 0 : 1;
+        const bm = b.name.toLowerCase().includes(q) ? 0 : 1;
+        return am - bm;
+      });
+    }
+    artists.forEach(a => {
       const item = document.createElement('div');
       item.className = 'mobile-search-item';
       const subs = a.subs > 0 ? (a.subs >= 1e6 ? (a.subs / 1e6).toFixed(1) + 'M' : a.subs >= 1e3 ? Math.round(a.subs / 1e3) + 'K' : String(a.subs)) + ' subscribers' : 'Artist';
@@ -2736,7 +2942,18 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
         <button class="mobile-search-play-btn" title="Play songs" style="background:rgba(168,85,247,0.3); font-size:0.68rem; padding:6px 10px; border-radius:999px;">Play</button>
       `;
-      item.addEventListener('click', async () => {
+      // v3.21.1: tapping the artist opens their page (top songs + albums) —
+      // the same sheet you get by tapping an artist name anywhere else.
+      item.addEventListener('click', () => {
+        if (window.SimpMusicArtist) {
+          window.SimpMusicArtist.open(a.name);
+        } else {
+          showToast('Artist pages are unavailable in this build');
+        }
+      });
+      // The Play button keeps the old one-tap behaviour: queue the songs.
+      item.querySelector('.mobile-search-play-btn').addEventListener('click', async (e) => {
+        e.stopPropagation();
         showToast(`Playing songs by ${a.name}…`);
         const results = (await nativeSearch(a.name + ' songs', 10000, 'songs')) || [];
         if (results.length && results[0].videoId) {
@@ -2749,7 +2966,6 @@ document.addEventListener('DOMContentLoaded', () => {
       mobileSearchResultsList.appendChild(item);
     });
   }
-
   // =====================================================================
   // v3.14: language-aware "Discover Music" prefill for the Search tab.
   //
@@ -3006,7 +3222,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const mobileResetAllBtn = document.getElementById('mobileResetAllBtn');
 
   // Audio Quality Setting
-  const savedQuality = localStorage.getItem('simpmusic_audio_quality') || 'standard';
+  // v3.20.6: normalize before matching the buttons — a legacy stored "low"
+  // value used to match no button at all, so the card showed nothing selected.
+  const savedQuality = (typeof normalizeAudioQuality === 'function')
+    ? normalizeAudioQuality(localStorage.getItem('simpmusic_audio_quality'))
+    : (localStorage.getItem('simpmusic_audio_quality') || 'standard');
   if (mobileQualitySelector) {
     mobileQualitySelector.querySelectorAll('.mobile-quality-btn').forEach(btn => {
       if (btn.dataset.quality === savedQuality) btn.classList.add('active');
@@ -3498,8 +3718,18 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function measureNetSpeed() {
-    // 'offline' (fully grey) while navigator.onLine is false, else Mbps.
-    if (navigator.onLine === false) return 'offline';
+    // v3.20.7: the pill used to grey out purely on `navigator.onLine === false`.
+    // In the Android WebView that flag (and the `online` event) can stay wrong
+    // long after the network is back, which pinned the pill fully grey. The
+    // verdict now comes from SimpMusicNet, which probes for real; we only
+    // confirm once more before greying out, so a stale flag can't stick.
+    const net = window.SimpMusicNet;
+    if (net && typeof net.isOffline === 'function' && net.isOffline()) {
+      const ok = typeof net.verify === 'function' ? await net.verify(true) : false;
+      if (!ok) return 'offline';
+    } else if (!net && navigator.onLine === false) {
+      return 'offline';
+    }
     // 1) Warm up the connection (one throwaway ~64 KB load).
     try { await fetchBytes(NET_PROBE_URL + '?warm=' + Date.now()); } catch (e) {}
     // 2) Three parallel downloads — real bytes ÷ wall time. One retry if the
@@ -3568,6 +3798,13 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       window.addEventListener('online', () => updateNetPill(true));
       window.addEventListener('offline', () => netPillSetLevel(0));
+      // v3.20.7: re-measure when the app comes back to the foreground — the
+      // WebView can miss the `online` event entirely while it is frozen, which
+      // left the pill grey until the next 2-minute tick.
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) updateNetPill(true);
+      });
+      window.addEventListener('focus', () => updateNetPill(true));
       setInterval(() => updateNetPill(true), 120000);
     }
     catch (e) {}

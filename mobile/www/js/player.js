@@ -3,6 +3,69 @@
  * Integrates YouTube IFrame API with Audio Queue, Background Support & MediaSession API
  */
 
+/**
+ * v3.20.5: normalized "song identity" of a title. Every upload of ONE song
+ * ("Song (Official Video)", "Song (Lyrical)", "Song - Remix", "Song | Movie")
+ * collapses to the same key, so auto-advance can tell that the next search
+ * result is the same song rather than a new one. Letters/digits are kept
+ * Unicode-wide so Tamil/Telugu/Hindi titles stay distinct.
+ */
+function songKey(title) {
+  if (!title) return '';
+  let t = String(title).toLowerCase()
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/\[[^\]]*\]/g, ' ')
+    .replace(/\{[^}]*\}/g, ' ');
+  const markers = [' - ', ' \u2013 ', ' \u2014 ', ' |', ' \u2022 ', ' feat', ' ft.', ' ft ', ' official',
+    ' lyric', ' audio', ' video song', ' remix', ' version', ' cover', ' live ',
+    ' slowed', ' sped up', ' reverb', ' mashup', ' 8d ', ' remake', ' reprise',
+    ' title track', ' full song', ' making of', ' karaoke', ' instrumental',
+    ' whatsa', ' status', ' ringtone'];
+  let cut = t.length;
+  for (const m of markers) {
+    const i = t.indexOf(m);
+    if (i > 0 && i < cut) cut = i;
+  }
+  t = t.slice(0, cut);
+  try {
+    return t.replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+  } catch (e) {
+    // Very old WebView without Unicode property escapes.
+    return t.replace(/[^a-z0-9\u00C0-\uFFFF]+/g, ' ').trim();
+  }
+}
+
+/**
+ * v3.20.6: "saver" | "standard" | "high" are the values the Settings card
+ * sends ("low" is the legacy spelling of "saver"). Normalizing in one place
+ * keeps the stored setting, the active button and the native push in sync.
+ */
+function normalizeAudioQuality(q) {
+  const v = String(q || '').toLowerCase().trim();
+  if (v === 'saver' || v === 'low' || v === 'data' || v === 'datasaver') return 'saver';
+  if (v === 'high' || v === 'highres' || v === 'best') return 'high';
+  return 'standard';
+}
+
+/**
+ * v3.20.7: verified "we really have no network" check.
+ *
+ * Every offline branch below used to read `navigator.onLine` (plus the legacy
+ * `navigator.connection.type`) directly. In the Android WebView that flag can
+ * stay false after connectivity returns — and the `online` event is missed
+ * while the WebView is frozen — which sent every tap down the offline path
+ * (play the downloaded copy / playOfflineIfAvailable) long after the network
+ * was back. SimpMusicNet probes for real, so this now asks it. When the helper
+ * is absent we fall back to the raw signals, defaulting to ONLINE so playback
+ * always tries the live stream first.
+ */
+function isOfflineNow() {
+  const net = window.SimpMusicNet;
+  if (net && typeof net.isOffline === 'function') return net.isOffline();
+  return (navigator.connection && navigator.connection.type === 'none')
+    || navigator.onLine === false;
+}
+
 class MusicPlayer {
   constructor() {
     this.ytPlayer = null;
@@ -30,7 +93,7 @@ class MusicPlayer {
     // v3.12: crossfade seconds (persisted; pushed to native when available)
     this.crossfadeSec = parseInt(localStorage.getItem('simpmusic_crossfade') || '0', 10) || 0;
     // v3.12.2: audio quality — push the stored choice to native at startup.
-    this.audioQuality = localStorage.getItem('simpmusic_audio_quality') || 'standard';
+    this.audioQuality = normalizeAudioQuality(localStorage.getItem('simpmusic_audio_quality'));
     this.setupNativeListeners();
 
     this.initYouTubeApi();
@@ -199,12 +262,25 @@ class MusicPlayer {
       }
       case 'error': {
         if (!this.nativeMode) return;
+        // v3.20.3: the native service now DROPS an unplayable track and starts
+        // the next one. Treating that as a hard failure was the bug behind
+        // "music just stops": the previous song was torn down, the fallback
+        // iframe stayed silent, and the UI kept claiming it was playing.
+        if (d && d.skipping) {
+          console.warn('Skipping unplayable track:', d.skipped, d.state || '');
+          if (window.showToast) {
+            window.showToast(`Skipping “${String(d.skipped || 'that track').slice(0, 40)}” — can\'t be played`);
+          }
+          // Leave the transport state alone: the service starts the next track
+          // within a moment and the trackchange event re-syncs the UI.
+          break;
+        }
         this.nativeRetries = (this.nativeRetries || 0) + 1;
+        if (this.isPlaying) { this.isPlaying = false; this.emit('pause'); }
         console.warn('Native playback error, falling back to iframe:', d.state || d);
         // v3.7: offline (no network)? The iframe cannot play either — switch
         // to the downloaded local file instead of a doomed fallback.
-        const offlineNow = (navigator.connection && navigator.connection.type === 'none')
-          || !navigator.onLine;
+        const offlineNow = isOfflineNow();
         if (offlineNow) {
           this.playOfflineIfAvailable().then((ok) => { if (!ok) this.fallbackToIframe(); });
         } else {
@@ -522,8 +598,7 @@ class MusicPlayer {
       }
       // v3.7: offline? Skip the doomed stream sync and play the downloaded
       // local file directly when we have it.
-      const offlineNow = (navigator.connection && navigator.connection.type === 'none')
-        || !navigator.onLine;
+      const offlineNow = isOfflineNow();
       if (offlineNow) {
         this.playOfflineIfAvailable(track).then((ok) => {
           if (!ok) console.warn('Offline: no downloaded copy of', track.title);
@@ -629,8 +704,7 @@ class MusicPlayer {
       // startForegroundService MUST reach startForeground; the old TOGGLE
       // handler returned START_NOT_STICKY without it when nothing was
       // queued). When a downloaded copy exists we play it locally instead.
-      const offlineNow = (navigator.connection && navigator.connection.type === 'none')
-        || !navigator.onLine;
+      const offlineNow = isOfflineNow();
       if (offlineNow) {
         this.playOfflineIfAvailable().then((ok) => {
           if (!ok) console.warn('Offline: no downloaded songs available');
@@ -681,6 +755,30 @@ class MusicPlayer {
     } catch (e) { return null; }
   }
 
+  /**
+   * v3.20.5: first queue slot holding a DIFFERENT song than the one playing,
+   * or -1 when the rest of the queue is just more uploads of the same song.
+   * {@code wrap} lets shuffle / repeat-all come back around the list.
+   */
+  firstDifferentSongIndex(from, wrap) {
+    const n = this.queue.length;
+    if (!n) return -1;
+    const cur = this.currentTrack;
+    const curKey = cur ? songKey(cur.title) : '';
+    if (!curKey) return (from >= 0 && from < n) ? from : (wrap ? 0 : -1);
+    if (from < 0) from = 0;
+    for (let step = 0; step < n; step++) {
+      let i = from + step;
+      if (i >= n) {
+        if (!wrap) return -1;
+        i -= n;
+      }
+      if (i === this.currentIndex) continue;
+      if (songKey(this.queue[i].title) !== curKey) return i;
+    }
+    return -1;
+  }
+
   next() {
     if (this.nativeMode && this.nativeAvailable) {
       try { window.Capacitor.Plugins.PlaybackKeeper.next(); } catch (e) {}
@@ -695,21 +793,26 @@ class MusicPlayer {
     }
 
     if (this.shuffle) {
-      let nextIdx = Math.floor(Math.random() * this.queue.length);
-      if (this.queue.length > 1 && nextIdx === this.currentIndex) {
-        nextIdx = (nextIdx + 1) % this.queue.length;
-      }
-      this.currentIndex = nextIdx;
+      // v3.20.5: shuffle must not land on another upload of the song already
+      // playing either.
+      const r = Math.floor(Math.random() * this.queue.length);
+      const idx = this.firstDifferentSongIndex(r, true);
+      this.currentIndex = idx >= 0 ? idx : r;
     } else {
+      // v3.20.5: a search for one song returns mostly its own variants
+      // ("(Official Video)", "- Remix", "Lyrical") — stepping into those is
+      // exactly "it plays all 20 versions of the same song".
+      let nextIdx = -1;
       if (this.currentIndex < this.queue.length - 1) {
-        this.currentIndex++;
-      } else if (this.repeatMode === 'all') {
-        this.currentIndex = 0;
-      } else {
-        // v3.12.1: queue ended — try a similar-song search (current artist)
-        // before giving up, mirroring the native behavior. v3.19.10: rapid
-        // taps while a search is in flight wait silently (no stop, no
-        // duplicate append) instead of stacking parallel searches.
+        nextIdx = this.firstDifferentSongIndex(this.currentIndex + 1, false);
+      }
+      if (nextIdx < 0 && this.repeatMode === 'all') nextIdx = 0;
+      if (nextIdx < 0) {
+        // v3.12.1: queue ended (or only same-song variants left) — try a
+        // similar-song search (current artist) before giving up, mirroring the
+        // native behavior. v3.19.10: rapid taps while a search is in flight
+        // wait silently (no stop, no duplicate append) instead of stacking
+        // parallel searches.
         this.findSimilarAndPlay().then(added => {
           if (added === 'inflight') return;
           if (!added) {
@@ -720,6 +823,7 @@ class MusicPlayer {
         });
         return;
       }
+      this.currentIndex = nextIdx;
     }
 
     const nextTrack = this.queue[this.currentIndex];
@@ -921,7 +1025,7 @@ class MusicPlayer {
    * NEXT resolved stream uses the selected band.
    */
   setAudioQuality(q) {
-    const nq = (q === 'low' || q === 'high') ? q : 'standard';
+    const nq = normalizeAudioQuality(q);
     this.audioQuality = nq;
     try { localStorage.setItem('simpmusic_audio_quality', nq); } catch (e) {}
     if (this.nativeAvailable) {
@@ -1001,11 +1105,16 @@ class MusicPlayer {
       const reco = window.SimpMusicReco;
       if (!reco || !reco.getSections) return null;
       const inQueue = new Set(this.queue.map(t => t.videoId));
+      // v3.20.5: a recommendation can be the same song in another upload —
+      // skipping it here is what stops "the same song again, twenty times".
+      const curKey = songKey((this.currentTrack || {}).title || '');
       const sections = reco.getSections() || [];
       for (const s of sections) {
         if (s.kind === 'recent') continue; // history is not a recommendation
         for (const t of s.tracks) {
-          if (t && t.videoId && !inQueue.has(t.videoId)) return t;
+          if (!t || !t.videoId || inQueue.has(t.videoId)) continue;
+          if (curKey && songKey(t.title) === curKey) continue;
+          return t;
         }
       }
     } catch (e) {}
@@ -1067,9 +1176,12 @@ class MusicPlayer {
         thumbnail: r.thumbnail || ('https://i.ytimg.com/vi/' + r.videoId + '/hqdefault.jpg'),
         durationSec: r.durationSec || 0
       });
+      // v3.20.5: "similar" must not be another upload of the SAME song.
+      const curKey = songKey(cur.title);
       // Pass 1: skip anything queued or heard recently.
       for (const r of results) {
         if (!r || !r.videoId || r.videoId === cur.videoId) continue;
+        if (curKey && songKey(r.title) === curKey) continue;
         if (inQ.has(r.videoId) || recentIds[r.videoId]) continue;
         const t = buildTrack(r);
         this.queue.push(t);
@@ -1082,6 +1194,7 @@ class MusicPlayer {
       // history repeats rather than dead-ending the queue.
       for (const r of results) {
         if (!r || !r.videoId || r.videoId === cur.videoId || inQ.has(r.videoId)) continue;
+        if (curKey && songKey(r.title) === curKey) continue;
         const t = buildTrack(r);
         this.queue.push(t);
         this.currentIndex = this.queue.length - 1;

@@ -34,6 +34,19 @@
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); } catch (e) {}
   }
 
+  /**
+   * v3.20.8: tell the rest of the app that the language list changed, so Home's
+   * "Current Trending" and the chart cards re-query in the new languages instead
+   * of keeping whatever they rendered before the pick.
+   */
+  function notifyLanguagesChanged() {
+    try {
+      window.dispatchEvent(new CustomEvent('simp:languages-changed'));
+    } catch (e) {
+      // Very old WebView without CustomEvent: the caches still expire on TTL.
+    }
+  }
+
   function nativeSearch(query, timeoutMs) {
     timeoutMs = timeoutMs || 10000;
     return new Promise(function (resolve) {
@@ -75,9 +88,42 @@
     });
   }
 
+  /**
+   * v3.20.4: one fixed query per language meant every language row (and the
+   * Home "Current Trending" list, which is built from these searches) showed
+   * the exact same songs forever. Rotate through freshness-angled variants in
+   * 6h buckets — the language word stays first so results stay on-language,
+   * while the month/year stamp surfaces newly released songs.
+   */
+  function queryVariants(cat) {
+    var now = new Date();
+    var year = now.getFullYear();
+    var month = now.toLocaleString('en-US', { month: 'long' });
+    // "தமிழ் Tamil" → "Tamil" (the ASCII language name drives the query).
+    var name = String(cat.label || cat.id).replace(/[^\x20-\x7E]/g, '').trim() || cat.id;
+    return [
+      cat.query,
+      name + ' new songs ' + month + ' ' + year,
+      name + ' top hits this week',
+      name + ' trending songs ' + year
+    ];
+  }
+
+  function rotatedQuery(cat) {
+    var variants = queryVariants(cat);
+    var bucket = Math.floor(Date.now() / (6 * 60 * 60 * 1000));
+    return variants[Math.abs(bucket) % variants.length];
+  }
+
   function fetchForCategory(cat) {
-    return nativeSearch(cat.query).then(function (r) {
-      return r || backendSearch(cat.query);
+    var query = rotatedQuery(cat);
+    return nativeSearch(query).then(function (r) {
+      // Empty result (or the variant got nothing usable) → evergreen query.
+      if (r && r.length) return r;
+      return nativeSearch(cat.query);
+    }).then(function (r) {
+      if (r && r.length) return r;
+      return backendSearch(query);
     });
   }
 
@@ -137,10 +183,12 @@
       setTimeout(function () { overlay.remove(); }, 250);
       loadNewReleases();
       refreshSummaries();
+      notifyLanguagesChanged();
     });
 
     overlay.querySelector('#catSkip').addEventListener('click', function () {
       saveSelected(['english']); // sensible default rather than empty
+      notifyLanguagesChanged();
       overlay.classList.remove('active');
       setTimeout(function () { overlay.remove(); }, 250);
       loadNewReleases();
@@ -279,7 +327,7 @@
 
   window.SimpMusicCategories = {
     get: getSelected,
-    set: function (arr) { saveSelected(arr); loadNewReleases(); refreshSummaries(); },
+    set: function (arr) { saveSelected(arr); loadNewReleases(); refreshSummaries(); notifyLanguagesChanged(); },
     reload: loadNewReleases,
     showPicker: function () { if (document.getElementById('catOverlay')) return; buildOverlay(); },
     CATEGORIES: CATEGORIES,

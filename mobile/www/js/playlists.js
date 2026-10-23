@@ -295,7 +295,7 @@
       + '<button class="pl-sheet-item" data-playnext="1"><span class="pl-sheet-ico">⏭</span>Play next</button>'
       + '<button class="pl-sheet-item" data-addqueue="1"><span class="pl-sheet-ico">➕</span>Add to queue</button>'
       + '<button class="pl-sheet-item" data-playlistmode="1"><span class="pl-sheet-ico">🎵</span>Add to playlist</button>'
-      + '<button class="pl-sheet-item" data-download="1"><span class="pl-sheet-ico">⬇</span>' + (downloaded ? 'Downloaded ✓ — download again' : 'Download for offline') + '</button>'
+      + (window.STORE_BUILD ? '' : '<button class="pl-sheet-item" data-download="1"><span class="pl-sheet-ico">⬇</span>' + (downloaded ? 'Downloaded ✓ — download again' : 'Download for offline') + '</button>')
       + '<div class="pl-sheet-sep"></div>'
       + '<button class="pl-sheet-item pl-sheet-danger" data-notforme="1"><span class="pl-sheet-ico">🚫</span>Not for me</button>'
       + '<div class="pl-sheet-sep" id="plSheetLists" style="display:none;">CHOOSE A PLAYLIST</div>'
