@@ -11,6 +11,13 @@
 
         <!-- v3.20.2-store: with -PstoreBuild=true the downloader is removed
              from compilation itself — the class is absent from the store binary. -->
+        <!-- Legacy native audio service, kept for Elite only. -->
+        <service
+            android:name=".BackgroundAudioService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+
         <service
             android:name=".PlaybackKeepAliveService"
             android:exported="true"
