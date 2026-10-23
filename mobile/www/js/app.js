@@ -496,7 +496,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 2. Standalone zero-failure fallback if backend returned empty or was unreachable
     if (!results || results.length === 0) {
       if (typeof window.clientSearch === 'function') {
-        results = window.clientSearch(cleanQ);
+        results = await window.clientSearch(cleanQ);
       }
     }
 
@@ -3442,6 +3442,32 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => window.location.reload(), 800);
       }
     });
+  }
+
+  // Wipe All Data
+  if (mobileResetAllBtn) {
+    mobileResetAllBtn.addEventListener('click', () => {
+      if (confirm('Are you sure you want to wipe all local data (likes, recent songs, cached playlists) on this device?')) {
+        localStorage.clear();
+        showToast('All local data wiped. Reloading...');
+        setTimeout(() => window.location.reload(), 800);
+      }
+    });
+  }
+
+  // Update profile and settings stats
+  function updateDeviceProfileUI() {
+    const statsLikesCount = document.getElementById('statsLikesCount');
+    const statsQueueCount = document.getElementById('statsQueueCount');
+    const mobileStatLikes = document.getElementById('mobileStatLikes');
+    const mobileStatRecents = document.getElementById('mobileStatRecents');
+    const mobileStatPlaylists = document.getElementById('mobileStatPlaylists');
+
+    if (statsLikesCount) statsLikesCount.textContent = likedSongs.length;
+    if (statsQueueCount) statsQueueCount.textContent = player.queue.length;
+    if (mobileStatLikes) mobileStatLikes.textContent = likedSongs.length;
+    if (mobileStatRecents) mobileStatRecents.textContent = recentSongs.length;
+    if (mobileStatPlaylists) mobileStatPlaylists.textContent = '1';
   }
 
   // ===================================================================

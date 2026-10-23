@@ -37,8 +37,6 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
-
   // Network first for all resources
   event.respondWith(
     fetch(event.request).then((networkResponse) => {

@@ -73,13 +73,16 @@ class MusicPlayer {
     this.queue = [];
     this.currentIndex = -1;
     this.isPlaying = false;
+    this.userPaused = false;
     this.shuffle = false;
     this.repeatMode = 'off'; // 'off' | 'all' | 'one'
     this.volume = 80;
     this.currentTime = 0;
     this.duration = 0;
     this.listeners = {};
-    this.rafId = null;
+    this.tickerInterval = null;
+    this.heartbeatInterval = null;
+    this.silentAudio = null;
 
     // --- Native (ExoPlayer) playback mode ---
     // On Android the queue is handed to the native ExoPlayer service, which
@@ -408,7 +411,6 @@ class MusicPlayer {
   }
 
   initYouTubeApi() {
-    // Inject YouTube IFrame API script if not already present
     if (!window.YT) {
       const tag = document.createElement('script');
       tag.src = 'https://www.youtube.com/iframe_api';
@@ -451,7 +453,6 @@ class MusicPlayer {
         onError: (err) => {
           console.warn('YouTube Player Error:', err.data);
           this.emit('error', err.data);
-          // Auto advance if video fails to load
           setTimeout(() => this.next(), 1000);
         }
       }
@@ -469,6 +470,8 @@ class MusicPlayer {
           return;
         }
         this.isPlaying = true;
+        this.userPaused = false;
+        this.keepAudioEngineAlive();
         this.startProgressTicker();
         this.emit('play', this.currentTrack);
         this.updateMediaSessionState('playing');
@@ -479,7 +482,17 @@ class MusicPlayer {
         }
         break;
       case YT.PlayerState.PAUSED:
+        // Involuntary background pause detection: If user didn't hit pause, resume immediately!
+        if (this.isPlaying && !this.userPaused) {
+          setTimeout(() => {
+            if (!this.userPaused && this.ytPlayer && this.ytPlayer.playVideo) {
+              this.ytPlayer.playVideo();
+            }
+          }, 150);
+          return;
+        }
         this.isPlaying = false;
+        this.pauseAudioEngine();
         this.stopProgressTicker();
         this.emit('pause');
         this.updateMediaSessionState('paused');
@@ -489,6 +502,7 @@ class MusicPlayer {
         break;
       case YT.PlayerState.ENDED:
         this.isPlaying = false;
+        this.pauseAudioEngine();
         this.stopProgressTicker();
         this.emit('ended');
         this.onTrackEnded();
@@ -535,17 +549,15 @@ class MusicPlayer {
           }
         } catch (e) {}
       }
-      if (this.isPlaying) {
-        this.rafId = requestAnimationFrame(tick);
-      }
     };
-    this.rafId = requestAnimationFrame(tick);
+    this.tickerInterval = setInterval(updateTime, 500);
+    updateTime();
   }
 
   stopProgressTicker() {
-    if (this.rafId) {
-      cancelAnimationFrame(this.rafId);
-      this.rafId = null;
+    if (this.tickerInterval) {
+      clearInterval(this.tickerInterval);
+      this.tickerInterval = null;
     }
   }
 
@@ -632,11 +644,11 @@ class MusicPlayer {
 
   loadVideo(videoId) {
     if (!this.ytPlayer || !this.isReady) {
-      // Retry when player is ready
       setTimeout(() => this.loadVideo(videoId), 300);
       return;
     }
     try {
+      this.keepAudioEngineAlive();
       this.ytPlayer.loadVideoById({
         videoId: videoId,
         suggestedQuality: 'small'
